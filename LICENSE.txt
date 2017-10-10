@@ -1,0 +1,138 @@
+EMWEB NON-COMMERCIAL PUBLIC LICENSE
+
+Version 1.0.0, 10 October 2017
+
+Copyright (c) 2017 Emweb BVBA, 3020 Herent, Belgium
+
+Preamble
+
+Emweb wants to give academic researchers the freedom to use and to
+improve software it has developed, subject to the terms and conditions
+of this non-commercial public license.
+
+Terms and Conditions
+
+  1. Definitions
+
+  “License” refers to the Emweb non-commercial public license, version
+1.0.0.
+
+  “Copyright” also means copyright-like laws that apply to other kinds
+of works, such as semiconductors.
+
+  “Copyright Notice” means the following mention: “Copyright © 2017
+Emweb BVBA, 3020 Herent, Belgium”
+
+  “Intellectual Property Rights” means trademarks, trade names, domain
+names, copyrights, patents, (un)registered designs, trade secrets and
+all other intellectual and industrial property rights.
+
+  The “Program” refers to any copyrightable work licensed under this
+License.
+
+  2. Permission to use, redistribute and modify the Program
+
+  Individuals and organisations are permitted to use, redistribute and
+modify the Program, provided that the following conditions are met:
+
+     1. Redistributions of source code must retain the Copyright
+     Notice, the terms and conditions of this License, and the
+     disclaimer of warranty and limitation of liability as provided
+     for in Section 3 of this License.
+
+     2. Redistributions in binary form must reproduce the Copyright
+     Notice, the terms and conditions of this License, and the
+     disclaimer of warranty and limitation of liability as provided
+     for in Section 3 of this License in the documentation and/or
+     other materials provided with the distribution.
+
+     3. Remote access to an executable form (through a web interface,
+     web service, as part of a software package or other) must
+     reproduce the Copyright Notice, the terms and conditions of this
+     License, and the disclaimer of warranty and limitation of
+     liability as provided for in Section 3 of this License in the
+     documentation and in the user interface (if applicable).
+
+     4. No redistribution or modification is allowed if, in any
+     manner, intended for, or directed toward, commercial advantage or
+     private monetary compensation. Use of the Program or of a
+     modified version of the Program which is in any manner intended
+     for, or directed toward, commercial advantage or private monetary
+     compensation must be limited to a period of 30 consecutive
+     calendar days.
+
+     5. Modifications to the Program may only be distributed and
+     redistributed to the extent:
+
+        a. The modified Program carries prominent notices stating that
+	you modified it, and giving a relevant date of the
+	modification;
+
+        b. The modified Program carries prominent notices stating that
+	it is released under this License;
+
+        c. The original distributor of the modified Program represents
+	and warrants that no third party Intellectual Property Rights
+	are being infringed by the distribution or the subsequent
+	redistribution of the modified Program in accordance with this
+	Licence
+
+        d. All rights, inclusive of the Intellectual Property Rights,
+	in the modified Program are transferred to Emweb.
+
+     6. By distributing or redistributing a modified version of the
+     Program, you recognize explicitly to relinquish the right to
+     invoke any moral rights you may have in the modified
+     version. This relinquishment includes, but is not limited to, the
+     relinquishment of the right to divulgation, reproduction,
+     transformation and the right of being named.
+
+     Unless stated otherwise, all rights granted under this License
+     are granted for the term of copyright on the Program, and are
+     irrevocable provided the stated conditions are met. Any use,
+     modification, distribution or redistribution which is contrary to
+     these terms and conditions will automatically terminate your
+     rights under this License.
+
+  3. Disclaimer of warranty and limitation of liability
+
+  THE PROGRAM IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+  4. Severability
+
+  If any provision of this License should be held invalid, unlawful or
+unenforceable in any respect in any jurisdiction, then, to the fullest
+extent permitted by applicable law, (i) all other provisions hereof
+shall remain in full force and effect in such jurisdiction and shall
+be liberally construed in order to carry out the intention of the
+parties as nearly as possible and (ii) such invalidity, unlawfulness
+or unenforceability shall not affect the validity, legality or
+enforceability of such provision in any other jurisdiction. To the
+fullest extent permitted by applicable law, you hereby waive any legal
+provision that would render any provision of this License prohibited
+or unenforceable in any respect.
+
+  5. Applicable law and competent jurisdiction
+
+  All issues, questions and disputes concerning the validity,
+interpretation, enforcement, performance or termination of this
+License shall be governed by and construed in accordance with Belgian
+law. Any disputes in relation to or arising from this License shall be
+submitted to the competent Dutch-speaking courts of Brussels.
+
+  If the disclaimer of warranty and limitation of liability provided
+above cannot be given local legal effect according to their terms,
+reviewing courts shall apply local law that most closely approximates
+an absolute waiver of all civil liability in connection with the
+Program, unless a warranty or assumption of liability accompanies a
+copy of the Program in return for a fee.
