@@ -225,7 +225,8 @@ public:
       if (!queryGap && !queryMissing && !refGap && !refMissing) {
 	++result.matchCount;
 
-	result.score += weightMatrix_[ref[i].intRep()][query[i].intRep()];
+	if (!query[i].isAmbiguity())
+	  result.score += weightMatrix_[ref[i].intRep()][query[i].intRep()];
 
 	if (result.begin == -1)
 	  result.begin = refPos;

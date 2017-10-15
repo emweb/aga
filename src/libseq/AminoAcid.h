@@ -133,6 +133,13 @@ public:
   }
 
   /**
+   * Is the amino acid ambiguous ?
+   *
+   * For consistency with seq::Nucleotide interface, always returns false.
+   */
+  bool isAmbiguity() const { return false; }
+
+  /**
    * Get the three letter abbreviation for this amino acid.
    *
    * Note that AminoAcid::B and AminoAcid::Z are combinations of two
