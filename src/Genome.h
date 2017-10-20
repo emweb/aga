@@ -97,13 +97,17 @@ struct CDSAlignment
   seq::CodingSequence ref, query;
 };
 
-extern std::vector<CDSAlignment> getCDSAlignments(const seq::NTSequence& ref,
-						  const std::vector<CdsFeature>& cdsFeatures,
-						  const seq::NTSequence& sequence, const Cigar& alignment);
+extern std::vector<CDSAlignment> getCDSAlignments
+  (const seq::NTSequence& ref,
+   const std::vector<CdsFeature>& cdsFeatures,
+   const seq::NTSequence& sequence, const Cigar& alignment,
+   bool overlappingOnly);
 
-extern std::vector<CDSAlignment> getCDSAlignments(const seq::NTSequence& alignedRef,
-						  const seq::NTSequence& alignedQuery,
-						  const std::vector<CdsFeature>& cdsFeatures);
+extern std::vector<CDSAlignment> getCDSAlignments
+  (const seq::NTSequence& alignedRef,
+   const seq::NTSequence& alignedQuery,
+   const std::vector<CdsFeature>& cdsFeatures,
+   bool overlappingOnly);
 
 extern AlignmentStats calcStats(const seq::NTSequence& ref,
 				const seq::NTSequence& query,

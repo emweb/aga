@@ -125,6 +125,51 @@ Cigar Cigar::createFromAlignment(const seq::NTSequence& ref, const seq::NTSequen
   return alignment;
 }
 
+int Cigar::queryStart() const
+{
+  int i = 0;
+
+  for (int i = 0; i < 2; ++i) {
+    if (i >= size())
+      return 0;
+
+    if ((*this)[i].op() == CigarItem::RefSkipped)
+      return (*this)[i].length();
+
+    if ((*this)[i].op() != CigarItem::QuerySkipped)
+      return 0;
+  }
+
+  return 0;
+}
+
+int Cigar::queryEnd() const
+{
+  int refPos = 0;
+  int lastQueryMatch = 0;
+
+  for (unsigned i = 0; i < size(); ++i) {
+    const auto& item = (*this)[i];
+
+    switch (item.op()) {
+    case CigarItem::Match:
+      lastQueryMatch = refPos + item.length();
+      break;
+    case CigarItem::RefSkipped:
+    case CigarItem::QueryGap:
+      break;
+    case CigarItem::RefGap:
+    case CigarItem::QuerySkipped:
+      refPos -= item.length();
+      break;
+    }
+
+    refPos += item.length();
+  }
+
+  return lastQueryMatch;
+}
+
 std::ostream& operator<<(std::ostream& o, const CigarItem& c)
 {
   static char charS[] = { 'M', 'I', 'D', 'X', 'O' };

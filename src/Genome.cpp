@@ -298,13 +298,33 @@ void Genome::preprocess(int ntWeight, int aaWeight)
 }
 
 std::vector<CDSAlignment>
-getCDSAlignments(const Cigar& alignment, const seq::NTSequence& ref, const seq::NTSequence& query,
-		 const std::vector<CdsFeature>& cdsFeatures)
+getCDSAlignments(const Cigar& alignment, const seq::NTSequence& ref,
+		 const seq::NTSequence& query,
+		 const std::vector<CdsFeature>& cdsFeatures,
+		 bool overlappingOnly)
 { 
   std::vector<CDSAlignment> result;
 
+  Range queryRange;
+  queryRange.start = alignment.queryStart();
+  queryRange.end = alignment.queryEnd();
+
   for (const auto& f : cdsFeatures) {
     seq::NTSequence cdsRef, cdsQuery;
+
+    if (overlappingOnly) {
+      bool overlap = false;
+      for (const auto& r : f.location) {
+	if (overlaps(r, queryRange)) {
+	  overlap = true;
+	  break;
+	}
+      }
+
+      if (!overlap)
+	continue;
+    }
+    
     for (const auto& r : f.location) {
       int alignedStart = alignment.findAlignedPos(r.start);
       int alignedEnd = alignment.findAlignedPos(r.end - 1) + 1;
@@ -314,18 +334,6 @@ getCDSAlignments(const Cigar& alignment, const seq::NTSequence& ref, const seq::
       cdsQuery.insert(cdsQuery.end(),
 		      query.begin() + alignedStart, query.begin() + alignedEnd);
     }
-
-    bool empty = true;
-    for (unsigned i = 0; i < cdsQuery.size(); ++i)
-      if (cdsQuery[i] != seq::Nucleotide::GAP &&
-	  cdsQuery[i] != seq::Nucleotide::MISSING) {
-	empty = false;
-	break;
-      }
-
-    /*if (empty)
-      continue;
-    */
 
     if (f.complement) {
       cdsRef = cdsRef.reverseComplement();
@@ -387,24 +395,28 @@ getCDSAlignments(const Cigar& alignment, const seq::NTSequence& ref, const seq::
 }
  
 std::vector<CDSAlignment>
-getCDSAlignments(const seq::NTSequence& genome, const std::vector<CdsFeature>& cdsFeatures,
-		 const seq::NTSequence& sequence, const Cigar& alignment)
+getCDSAlignments(const seq::NTSequence& genome,
+		 const std::vector<CdsFeature>& cdsFeatures,
+		 const seq::NTSequence& sequence,
+		 const Cigar& alignment, bool overlappingOnly)
 {
   seq::NTSequence ref = genome;
   seq::NTSequence query = sequence;
 
   alignment.align(ref, query);
 
-  return getCDSAlignments(alignment, ref, query, cdsFeatures);
+  return getCDSAlignments(alignment, ref, query, cdsFeatures, overlappingOnly);
 }
 
 std::vector<CDSAlignment>
 getCDSAlignments(const seq::NTSequence& ref, const seq::NTSequence& query,
-		 const std::vector<CdsFeature>& cdsFeatures)
+		 const std::vector<CdsFeature>& cdsFeatures,
+		 bool overlappingOnly)
 {
   Cigar alignment = Cigar::createFromAlignment(ref, query);
 
-  return getCDSAlignments(alignment, ref, query, cdsFeatures);
+  return getCDSAlignments(alignment, ref, query, cdsFeatures,
+			  overlappingOnly);
 }
 
 AlignmentStats calcStats(const seq::NTSequence& ref,

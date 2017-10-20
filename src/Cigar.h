@@ -117,6 +117,9 @@ struct Cigar : public std::vector<CigarItem>
   void align(seq::NTSequence& ref, seq::NTSequence& query) const;
   static Cigar createFromAlignment(const seq::NTSequence& ref, const seq::NTSequence& query);
 
+  int queryStart() const;
+  int queryEnd() const;
+  
   friend void swap(Cigar& a, Cigar& b) {
     std::swap((std::vector<CigarItem>&)a, (std::vector<CigarItem>&)b);
   }

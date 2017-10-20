@@ -76,7 +76,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 
     {
       std::vector<CDSAlignment> aaAlignments
-	= getCDSAlignments(ref, ref.cdsFeatures(), query, solution.cigar);
+	= getCDSAlignments(ref, ref.cdsFeatures(), query, solution.cigar, true);
 
       std::ofstream aa;
       if (!cdsAlignmentsFile.empty())
@@ -112,7 +112,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 
     if (!proteins.empty()) {
       std::vector<CDSAlignment> aaAlignments
-	= getCDSAlignments(ref, proteins, query, solution.cigar);
+	= getCDSAlignments(ref, proteins, query, solution.cigar, true);
 
       std::ofstream aa;
       if (!proteinAlignemntsFile.empty())
