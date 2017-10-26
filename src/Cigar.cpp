@@ -4,6 +4,7 @@
  * See LICENSE.txt for terms of use.
  */
 
+#include <sstream>
 #include "Cigar.h"
 
 int Cigar::findAlignedPos(int refPos) const
@@ -77,7 +78,8 @@ void Cigar::align(seq::NTSequence& ref, seq::NTSequence& query) const
   }
 }
 
-Cigar Cigar::createFromAlignment(const seq::NTSequence& ref, const seq::NTSequence& query)
+Cigar Cigar::createFromAlignment(const seq::NTSequence& ref,
+				 const seq::NTSequence& query)
 {
   Cigar alignment;
 
@@ -118,11 +120,36 @@ Cigar Cigar::createFromAlignment(const seq::NTSequence& ref, const seq::NTSequen
     if (alignment[0].op() == CigarItem::QueryGap)
       alignment[0] = CigarItem(CigarItem::RefSkipped, alignment[0].length());
     if (alignment[alignment.size() - 1].op() == CigarItem::QueryGap)
-      alignment[alignment.size() - 1] = CigarItem(CigarItem::RefSkipped,
-						  alignment[alignment.size() - 1].length());
+      alignment[alignment.size() - 1]
+	= CigarItem(CigarItem::RefSkipped,
+		    alignment[alignment.size() - 1].length());
   }
 
   return alignment;
+}
+
+int Cigar::queryStartExcess() const
+{
+  if (size() < 2)
+    return 0;
+
+  if ((*this)[0].op() == CigarItem::QuerySkipped &&
+      (*this)[1].op() != CigarItem::RefSkipped)
+    return (*this)[0].length();
+
+  return 0;
+}
+
+int Cigar::queryEndExcess() const
+{
+  if (size() < 2)
+    return 0;
+
+  if ((*this)[size() - 1].op() == CigarItem::QuerySkipped &&
+      (*this)[size() - 2].op() != CigarItem::RefSkipped)
+    return (*this)[size() - 1].length();
+
+  return 0;
 }
 
 int Cigar::queryStart() const
@@ -168,6 +195,43 @@ int Cigar::queryEnd() const
   }
 
   return lastQueryMatch;
+}
+
+std::string Cigar::str() const
+{
+  std::stringstream ss;
+  ss << *this;
+  return ss.str();
+}
+
+Cigar Cigar::fromString(const std::string& s)
+{
+  Cigar result;
+  
+  for (int i = 0; i < s.length(); ++i) {
+    if (isspace(s[i]))
+      continue;
+    std::string lens;
+    while (isdigit(s[i]))
+      lens += s[i++];
+    char sop = s[i];
+    int len = std::stoi(lens);
+
+    CigarItem::Op op = CigarItem::Match;
+    switch (sop) {
+    case 'M': op = CigarItem::Match; break;
+    case 'I': op = CigarItem::RefGap; break;
+    case 'D': op = CigarItem::QueryGap; break;
+    case 'X': op = CigarItem::RefSkipped; break;
+    case 'O': op = CigarItem::QuerySkipped; break;
+    default:
+      std::cerr << "Oops, unknown op: " << sop << std::endl;
+    }
+
+    result.push_back(CigarItem(op, len));
+  }
+
+  return result;
 }
 
 std::ostream& operator<<(std::ostream& o, const CigarItem& c)

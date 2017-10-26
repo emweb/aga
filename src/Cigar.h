@@ -115,10 +115,17 @@ struct Cigar : public std::vector<CigarItem>
   int findAlignedPos(int refPos) const;
   
   void align(seq::NTSequence& ref, seq::NTSequence& query) const;
-  static Cigar createFromAlignment(const seq::NTSequence& ref, const seq::NTSequence& query);
+  static Cigar createFromAlignment(const seq::NTSequence& ref,
+				   const seq::NTSequence& query);
+
+  int queryStartExcess() const;
+  int queryEndExcess() const;
 
   int queryStart() const;
   int queryEnd() const;
+
+  std::string str() const;
+  static Cigar fromString(const std::string& s);
   
   friend void swap(Cigar& a, Cigar& b) {
     std::swap((std::vector<CigarItem>&)a, (std::vector<CigarItem>&)b);
