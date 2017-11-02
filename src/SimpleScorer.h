@@ -53,8 +53,17 @@ struct AlignmentStats
   { }
 };
 
+struct AlignmentScoreVector
+{
+  AlignmentScoreVector();
+
+  int begin, end;
+  std::vector<int> score;
+};
+
 extern std::ostream& operator<< (std::ostream& o, const AlignmentStats& stats);
-extern void asJson(std::ostream& o, const std::string& id, const AlignmentStats& stats,
+extern void asJson(std::ostream& o, const std::string& id,
+		   const AlignmentStats& stats,
 		   const std::string& mutationStr);
 
 template <class Sequence>
@@ -143,8 +152,21 @@ public:
       return gapExtensionCost_;
   }
 
-  AlignmentStats calcStats(const Sequence& ref, const Sequence& query, int frameshiftCount = 0)
-    const
+  AlignmentStats calcStats(const Sequence& ref, const Sequence& query,
+			   int frameshiftCount = 0) const
+  {
+    return calcStats(ref, query, nullptr, frameshiftCount);
+  }
+
+  AlignmentStats calcStats(const Sequence& ref, const Sequence& query,
+			   AlignmentScoreVector& scoreVector) const
+  {
+    return calcStats(ref, query, &scoreVector, 0);
+  }
+
+  AlignmentStats calcStats(const Sequence& ref, const Sequence& query,
+			   AlignmentScoreVector *scoreVector,
+			   int frameshiftCount) const
   {
     AlignmentStats result;
 
@@ -168,13 +190,14 @@ public:
 
     int refPos = 0;
     for (unsigned i = 0; i < queryEnd; ++i) {
+      int score = 0;
       if (ref[i] == Character::GAP) {
 	++result.insertCount;
 	if (!refGap) {
-	  result.score += gapOpenCost_;
+	  score += gapOpenCost_;
 	  ++result.insertEvents;
 	} else
-	  result.score += gapExtensionCost_;
+	  score += gapExtensionCost_;
 	
 	refGap = true;
 	refMissing = false;
@@ -187,7 +210,7 @@ public:
 	    ref[i + 1] == Character::MISSING) {
 	  // do not count as X
 	} else {
-	  result.score += misalignmentCost_;
+	  score += misalignmentCost_;
 	  ++result.misaligned;
 	}
       } else {
@@ -198,10 +221,10 @@ public:
       if (query[i] == Character::GAP) {
 	++result.deleteCount;
 	if (!queryGap) {
-	  result.score += gapOpenCost_;
+	  score += gapOpenCost_;
 	  ++result.deleteEvents;
 	} else
-	  result.score += gapExtensionCost_;
+	  score += gapExtensionCost_;
 
 	queryGap = true;
 	queryMissing = false;
@@ -214,7 +237,7 @@ public:
 	    query[i + 1] == Character::MISSING) {
 	  // do not count as X
 	} else {
-	  result.score += misalignmentCost_;
+	  score += misalignmentCost_;
 	  ++result.misaligned;
 	}
       } else {
@@ -226,16 +249,30 @@ public:
 	++result.matchCount;
 
 	if (!query[i].isAmbiguity())
-	  result.score += weightMatrix_[ref[i].intRep()][query[i].intRep()];
+	  score += weightMatrix_[ref[i].intRep()][query[i].intRep()];
 
-	if (result.begin == -1)
+	if (result.begin == -1) {
 	  result.begin = refPos;
+	  if (scoreVector) {
+	    scoreVector->begin = i;
+	    scoreVector->end = queryEnd;
+	    scoreVector->score.resize(scoreVector->end -
+				      scoreVector->begin);
+	  }
+	}
 	result.end = refPos + 1;
 
 	if (ref[i] == query[i])
 	  ++result.identityCount;
       }
 
+      if (scoreVector &&
+	  (i >= scoreVector->begin) &&
+	  (i < scoreVector->end))
+	scoreVector->score[i - scoreVector->begin] = score;
+      
+      result.score += score;
+      
       if (!refGap && !refMissing)
 	++refPos;
     }

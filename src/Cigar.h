@@ -124,6 +124,9 @@ struct Cigar : public std::vector<CigarItem>
   int queryStart() const;
   int queryEnd() const;
 
+  void trimQueryStart(int alignmentLength);
+  void trimQueryEnd(int alignmentLength);
+  
   std::string str() const;
   static Cigar fromString(const std::string& s);
   

@@ -4,7 +4,14 @@
  * See LICENSE.txt for terms of use.
  */
 
+#include <limits>
+
 #include "SimpleScorer.h"
+
+AlignmentScoreVector::AlignmentScoreVector()
+  : begin(std::numeric_limits<int>::max()),
+    end(std::numeric_limits<int>::max())
+{ }
 
 std::ostream& operator<< (std::ostream& o, const AlignmentStats& stats)
 {

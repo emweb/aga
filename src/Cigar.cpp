@@ -197,6 +197,171 @@ int Cigar::queryEnd() const
   return lastQueryMatch;
 }
 
+void Cigar::trimQueryStart(int alignmentLength)
+{
+  int remain = alignmentLength;
+  int querySkipped = 0;
+  int refSkipped = 0;
+
+  int refSkipI = -1;
+  int querySkipI = -1;
+  
+  for (int i = 0; i < size(); ++i) {
+    CigarItem& item = (*this)[i];
+    switch (item.op()) {
+    case CigarItem::RefSkipped:
+      refSkipI = i;
+      break;
+
+    case CigarItem::QuerySkipped:
+      querySkipI = i;
+      break;
+
+    case CigarItem::Match:
+      if (remain >= item.length()) {
+	querySkipped += item.length();
+	refSkipped += item.length();
+	remain -= item.length();
+	erase(begin() + i);
+	--i;
+      } else {
+	querySkipped += remain;
+	refSkipped += remain;
+	item.add(-remain);
+	remain = 0;
+      }
+      break;
+
+    case CigarItem::RefGap:
+      if (remain >= item.length()) {
+	querySkipped += item.length();
+	remain -= item.length();
+	erase(begin() + i);
+	--i;
+      } else {
+	querySkipped += remain;
+	item.add(-remain);
+	remain = 0;
+      }
+      break;
+      
+    case CigarItem::QueryGap:
+      if (remain >= item.length()) {
+	refSkipped += item.length();
+	remain -= item.length();
+	erase(begin() + i);
+	--i;
+      } else {
+	refSkipped += remain;
+	item.add(-remain);
+	remain = 0;
+      }
+      break;
+
+    default:
+      break;
+    }
+
+    if (remain == 0)
+      break;
+  }
+
+  if (refSkipI >= 0)
+    (*this)[refSkipI].add(refSkipped);
+
+  if (querySkipI >= 0)
+    (*this)[querySkipI].add(querySkipped);
+
+  if (refSkipI < 0)
+    insert(begin(), CigarItem(CigarItem::RefSkipped, refSkipped));
+
+  if (querySkipI < 0)
+    insert(begin(), CigarItem(CigarItem::QuerySkipped, querySkipped));    
+}
+
+void Cigar::trimQueryEnd(int alignmentLength)
+{
+  int remain = alignmentLength;
+  int querySkipped = 0;
+  int refSkipped = 0;
+
+  int refSkipI = -1;
+  int querySkipI = -1;
+  
+  for (int i = 0; i < size(); ++i) {
+    int itemI = size() - i - 1;
+    CigarItem& item = (*this)[itemI];
+    switch (item.op()) {
+    case CigarItem::RefSkipped:
+      refSkipI = i;
+      break;
+
+    case CigarItem::QuerySkipped:
+      querySkipI = i;
+      break;
+
+    case CigarItem::Match:
+      if (remain >= item.length()) {
+	querySkipped += item.length();
+	refSkipped += item.length();
+	remain -= item.length();
+	erase(begin() + itemI);
+	--i;
+      } else {
+	querySkipped += remain;
+	refSkipped += remain;
+	item.add(-remain);
+	remain = 0;
+      }
+      break;
+
+    case CigarItem::RefGap:
+      if (remain >= item.length()) {
+	querySkipped += item.length();
+	remain -= item.length();
+	erase(begin() + itemI);
+	--i;
+      } else {
+	querySkipped += remain;
+	item.add(-remain);
+	remain = 0;
+      }
+      break;
+      
+    case CigarItem::QueryGap:
+      if (remain >= item.length()) {
+	refSkipped += item.length();
+	remain -= item.length();
+	erase(begin() + itemI);
+	--i;
+      } else {
+	refSkipped += remain;
+	item.add(-remain);
+	remain = 0;
+      }
+      break;
+
+    default:
+      break;
+    }
+
+    if (remain == 0)
+      break;
+  }
+
+  if (refSkipI >= 0)
+    (*this)[size() - refSkipI - 1].add(refSkipped);
+
+  if (querySkipI >= 0)
+    (*this)[size() - querySkipI - 1].add(querySkipped);
+
+  if (refSkipI < 0)
+    push_back(CigarItem(CigarItem::RefSkipped, refSkipped));
+
+  if (querySkipI < 0)
+    push_back(CigarItem(CigarItem::QuerySkipped, querySkipped));
+}
+
 std::string Cigar::str() const
 {
   std::stringstream ss;
