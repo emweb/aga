@@ -31,6 +31,12 @@ const AASequence& CodingSequence::aaSequence() const
   return aaSequence_;
 }
 
+void CodingSequence::setName(const std::string& name)
+{
+  ntSequence_.setName(name);
+  aaSequence_.setName(name);
+}
+
 void CodingSequence::changeNucleotide(int pos, Nucleotide value)
 {
   // a small effort to avoid to avoid retranslation of the whole AA sequence.

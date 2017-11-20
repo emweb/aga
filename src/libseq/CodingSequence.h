@@ -51,6 +51,8 @@ class CodingSequence
    */
   const AASequence& aaSequence() const;
 
+  void setName(const std::string& name);
+  
   /**
    * Change a nucleotide at a given position in the nucleotide sequence to
    * a new value.

@@ -63,11 +63,14 @@ void CdsFeature::parseLocation(const std::string& cds)
   
   complement = startsWith(cds, "complement");
   std::string s = cds;
-  std::regex rgx = std::regex("([0-9]+)..>?([0-9]+)");
+  std::regex rgx = std::regex("([0-9]+)(?:..>?([0-9]+))?");
 
   std::smatch m;
   while (std::regex_search (s,m, rgx)) {
-    location.push_back(Region(std::stoi(m[1]) -1, std::stoi(m[2])));
+    if (m[2].matched)
+      location.push_back(Region(std::stoi(m[1]) -1, std::stoi(m[2])));
+    else
+      location.push_back(Region(std::stoi(m[1]) -1, std::stoi(m[1])));
     s = m.suffix().str();
   }
 }
@@ -448,7 +451,8 @@ AlignmentStats calcStats(const seq::AASequence& alignedRef,
   return scorer.calcStats(alignedRef, alignedQuery, frameshiftCount);
 }
 
-Genome readGenome(const std::string& fasta, const std::string& cds)
+Genome readGenome(const std::string& fasta, const std::string& cds,
+		  std::vector<CdsFeature>& proteins)
 {
   Genome result;
 
@@ -473,10 +477,16 @@ Genome readGenome(const std::string& fasta, const std::string& cds)
     std::string cds;
     std::getline(lineStream, cds, '\t');
 
-    if (gene.empty())
-      gene = "G" + std::to_string(unnamed++);
+    std::string type;
+    std::getline(lineStream, type, '\t');
+
+    if (type == "0") {
+      if (gene.empty())
+	gene = "G" + std::to_string(unnamed++);
     
-    result.addCdsFeature(CdsFeature(gene, cds));
+      result.addCdsFeature(CdsFeature(gene, cds));
+    } else
+      proteins.push_back(CdsFeature(gene, cds));
   }
 
   return result;

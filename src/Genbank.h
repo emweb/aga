@@ -29,10 +29,15 @@ struct GenbankRecord
   std::vector<Feature> features;
 };
 
+class CdsFeature;
+
 extern std::istream& operator>>(std::istream& s, GenbankRecord& record);
 
 extern Genome getGenome(const GenbankRecord& record);
 
 extern std::string removeNewLines(const std::string& input);
+extern std::string makeValidId(const std::string& input);
+
+extern std::vector<CdsFeature> getProteins(const Genome& genome, const GenbankRecord& record);
 
 #endif // GENBANK_H_

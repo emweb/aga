@@ -181,32 +181,6 @@ std::string file(const std::string& f, const std::string& ext)
   return f.substr(0, dotPos) + ext; 
 }
 
-std::vector<CdsFeature> getProteins(const Genome& genome, const GenbankRecord& record)
-{
-  std::vector<CdsFeature> result;
-
-  for (const auto& f : record.features) {
-    if (f.qualifiers.count("protein_id") > 0) {
-      std::string name = f.qualifiers.at("protein_id");
-      if (f.qualifiers.count("product") > 0)
-	name += " " + f.qualifiers.at("product");
-      else if (f.qualifiers.count("gene") > 0)	
-	name += " " + f.qualifiers.at("gene");
-      CdsFeature cdsFeature(name, f.location);
-      genome.processCdsFeature(cdsFeature);
-      result.push_back(cdsFeature);
-    }
-  }
-
-#if 0
-  for (auto& f : result) {
-    std::cout << f.aaSeq << std::endl;
-  }
-#endif
-
-  return result;
-}
-
 void saveSolution(const Cigar& cigar,
 		  const seq::NTSequence& ref, const seq::NTSequence& query,
 		  const std::string& fname)
@@ -354,7 +328,7 @@ int main(int argc, char **argv)
   std::vector<CdsFeature> proteins;
 
   if (endsWith(genomeFile, ".fasta") && exists(file(genomeFile, ".cds")))
-    ref = readGenome(genomeFile, file(genomeFile, ".cds"));
+    ref = readGenome(genomeFile, file(genomeFile, ".cds"), proteins);
   else {
     GenbankRecord refGb = readGenomeGb(genomeFile);
     ref = getGenome(refGb);

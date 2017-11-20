@@ -289,3 +289,23 @@ Genome getGenome(const GenbankRecord& record)
 
   return result;
 }
+
+std::vector<CdsFeature> getProteins(const Genome& genome, const GenbankRecord& record)
+{
+  std::vector<CdsFeature> result;
+
+  for (const auto& f : record.features) {
+    if (f.qualifiers.count("protein_id") > 0) {
+      std::string name = f.qualifiers.at("protein_id");
+      if (f.qualifiers.count("product") > 0)
+	name += " " + f.qualifiers.at("product");
+      else if (f.qualifiers.count("gene") > 0)	
+	name += " " + f.qualifiers.at("gene");
+      CdsFeature cdsFeature(name, f.location);
+      if (genome.processCdsFeature(cdsFeature))
+	result.push_back(cdsFeature);
+    }
+  }
+
+  return result;
+}

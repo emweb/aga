@@ -42,7 +42,8 @@ struct CdsFeature
   };
 
   CdsFeature() { }
-  CdsFeature(const std::string& name, const std::string& location, const std::string& description = std::string());
+  CdsFeature(const std::string& name, const std::string& location,
+	     const std::string& description = std::string());
 
   // In the constructor, the regions use 1-based indexing (as Genbank)
   CdsFeature(const std::string& name, bool complement,
@@ -123,6 +124,7 @@ extern AlignmentStats calcStats(const seq::AASequence& alignedRef,
 				const SimpleScorer<seq::AASequence>& scorer,
 				int frameshiftCount);
 
-extern Genome readGenome(const std::string& fasta, const std::string& cds);
+extern Genome readGenome(const std::string& fasta, const std::string& cds,
+			 std::vector<CdsFeature>& proteins);
 
 #endif // GENOME_H_
