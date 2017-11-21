@@ -64,7 +64,8 @@ struct AlignmentScoreVector
 extern std::ostream& operator<< (std::ostream& o, const AlignmentStats& stats);
 extern void asJson(std::ostream& o, const std::string& id,
 		   const AlignmentStats& stats,
-		   const std::string& mutationStr);
+		   const std::string& mutationStr,
+		   const std::string& cds, int cdsBegin, int cdsEnd);
 
 template <class Sequence>
 class SimpleScorer

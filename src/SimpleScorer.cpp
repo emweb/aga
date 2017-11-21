@@ -36,11 +36,14 @@ std::ostream& operator<< (std::ostream& o, const AlignmentStats& stats)
 }
 
 void asJson(std::ostream& o, const std::string& id, const AlignmentStats& stats,
-	    const std::string& mutationStr)
+	    const std::string& mutationStr, const std::string& cds, int cdsBegin, int cdsEnd)
 {
   double alignLength = stats.matchCount + stats.insertCount + stats.deleteCount;
 
-  o << "{ \"id\" : \"" << id << "\", \"alignLength\" : " << alignLength;
+  o << "{ \"id\" : \"" << id << "\", \"alignLength\" : " << alignLength << ", "
+    << "\"cds\" : \"" << cds << "\", "
+    << "\"cdsBegin\" : " << cdsBegin << ", "
+    << "\"cdsEnd\" : " << cdsEnd;
 
   if (alignLength != 0) {
     o << ", "
