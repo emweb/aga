@@ -143,6 +143,8 @@ public:
    */
   bool isAmbiguity() const { return rep_ > NT_T; }
 
+  bool isStopCodon() const { return false; }
+
   /**
    * Replace the (ambiguos) nucleotide with a random non-ambigiuos nucleotide
    * that is represented by the ambiguity symbol.

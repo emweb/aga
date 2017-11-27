@@ -58,6 +58,8 @@ void asJson(std::ostream& o, const std::string& id, const AlignmentStats& stats,
       << "\"deletes\" : " << stats.deleteCount << ", "
       << "\"misaligned\" : " << stats.misaligned << ", "
       << "\"frameshifts\" : " << stats.frameShifts << ", "
+      << "\"ambiguities\" : " << stats.ambiguities << ", "
+      << "\"stopCodons\" : " << stats.stopCodons << ", "
       << "\"mutations\" : \"" << mutationStr << "\"";
   }
 

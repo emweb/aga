@@ -35,6 +35,8 @@ struct AlignmentStats
   int deleteCount;
   int frameShifts;
   int misaligned;
+  int ambiguities;
+  int stopCodons;
 
   AlignmentStats()
     : score(0),
@@ -49,7 +51,9 @@ struct AlignmentStats
       deleteEvents(0),
       deleteCount(0),
       frameShifts(0),
-      misaligned(0)
+      misaligned(0),
+      ambiguities(0),
+      stopCodons(0)
   { }
 };
 
@@ -246,6 +250,13 @@ public:
 	queryMissing = false;
       }
 
+      if (!queryGap && !queryMissing) {
+	if (query[i].isAmbiguity())
+	  ++result.ambiguities;
+	if (query[i].isStopCodon())
+	  ++result.stopCodons;
+      }
+      
       if (!queryGap && !queryMissing && !refGap && !refMissing) {
 	++result.matchCount;
 

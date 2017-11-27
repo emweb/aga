@@ -139,6 +139,8 @@ public:
    */
   bool isAmbiguity() const { return false; }
 
+  bool isStopCodon() const { return rep_ == AA_STP; }
+  
   /**
    * Get the three letter abbreviation for this amino acid.
    *
