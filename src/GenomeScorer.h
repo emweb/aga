@@ -229,6 +229,19 @@ public:
     return ntResult * ref.ntWeight(refI) + aaResult * ref.aaWeight(refI);
   }
 
+  double calcScore(const Genome& ref, const seq::NTSequence& query) const {
+    double ntScore = ntScorer_.calcScore(ref, query);
+
+    std::vector<CDSAlignment> aaAlignments
+      = getCDSAlignments(ref, query, ref.cdsFeatures(), true);
+
+    double aaScore = 0;
+    for (const auto& a : aaAlignments)
+      aaScore += aaScorer_.calcScore(a.ref.aaSequence(), a.query.aaSequence());
+
+    return ntScore + aaScore;
+  }
+  
 private:
   SimpleScorer<seq::NTSequence> ntScorer_;
   SimpleScorer<seq::AASequence> aaScorer_;

@@ -104,10 +104,21 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 		    << ": " << aaStats << std::endl;
       }
 
+      double concordance = 0;
+      {
+	Genome alignedRef = ref;
+	seq::NTSequence alignedQuery = query;
+	solution.cigar.align(alignedRef, alignedQuery);
+
+	concordance = calcConcordance(alignedRef, alignedQuery,
+				      aligner.scorer());
+      }
+      
       std::cout << std::endl
 		<< "Alignment score: " << ntStats.score << " (NT) + "
 		<< aaScore << " (AA) = "
-		<< ntStats.score + aaScore << std::endl;
+		<< ntStats.score + aaScore << std::endl
+		<< "Alignment concordance: " << concordance << "%" << std::endl;
     }
 
     if (!proteins.empty()) {

@@ -432,7 +432,7 @@ AlignmentStats calcStats(const seq::NTSequence& ref,
   seq::NTSequence alignedQuery = query;
 
   alignment.align(alignedRef, alignedQuery);
-
+  
   return scorer.calcStats(alignedRef, alignedQuery);
 }
 

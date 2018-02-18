@@ -127,4 +127,34 @@ extern AlignmentStats calcStats(const seq::AASequence& alignedRef,
 extern Genome readGenome(const std::string& fasta, const std::string& cds,
 			 std::vector<CdsFeature>& proteins);
 
+template <class Scorer, class Reference, class Query>
+double calcConcordance(const Reference& alignedRef,
+		       const Query& alignedQuery,
+		       const Scorer& scorer)
+{
+  typedef typename Reference::value_type Character;
+  
+  double score = scorer.calcScore(alignedRef, alignedQuery);
+
+  Reference r2 = alignedRef;
+  Query q2 = alignedQuery;
+  for (unsigned i = 0; i < r2.size(); ++i) {
+    if (r2[i] == Character::GAP) {
+      r2.erase(r2.begin() + i);
+      q2.erase(q2.begin() + i);
+      --i;
+    } else if (q2[i] != Character::MISSING &&
+	       q2[i] != Character::GAP) {
+      q2[i] = r2[i];
+    }
+  }
+
+  double perfectScore = scorer.calcScore(r2, q2);
+
+  if (perfectScore > 0)
+    return score / perfectScore * 100;
+  else
+    return 0;
+}
+
 #endif // GENOME_H_

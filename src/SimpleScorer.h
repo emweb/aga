@@ -37,6 +37,7 @@ struct AlignmentStats
   int misaligned;
   int ambiguities;
   int stopCodons;
+  double concordance;
 
   AlignmentStats()
     : score(0),
@@ -53,7 +54,8 @@ struct AlignmentStats
       frameShifts(0),
       misaligned(0),
       ambiguities(0),
-      stopCodons(0)
+      stopCodons(0),
+      concordance(0)
   { }
 };
 
@@ -157,6 +159,86 @@ public:
       return gapExtensionCost_;
   }
 
+  double calcScore(const Sequence& ref, const Sequence& query) const
+  {
+    double score = 0;
+
+    int queryEnd = 0;
+    for (int i = query.size() - 1; i >= 0; --i) {
+      if (ref[i] != Character::MISSING) {
+	if (query[i] != Character::MISSING) {
+	  queryEnd = i + 1;
+	  break;
+	}
+      }
+    }
+
+    if (queryEnd == 0)
+      return score;
+
+    bool refGap = false;
+    bool queryGap = false;
+    bool queryMissing = true;
+    bool refMissing = true;
+
+    for (unsigned i = 0; i < queryEnd; ++i) {
+      if (ref[i] == Character::GAP) {
+	if (!refGap) {
+	  score += gapOpenCost_;
+	} else
+	  score += gapExtensionCost_;
+	
+	refGap = true;
+	refMissing = false;
+      } else if (ref[i] == Character::MISSING) {
+	refGap = false;
+	refMissing = true;
+      } else if (isMisaligned(ref[i])) {
+	if (refMissing ||
+	    i == ref.size() - 1 ||
+	    ref[i + 1] == Character::MISSING) {
+	  // do not count as X
+	} else {
+	  score += misalignmentCost_;
+	}
+      } else {
+	refGap = false;
+	refMissing = false;
+      }
+
+      if (query[i] == Character::GAP) {
+	if (!queryGap) {
+	  score += gapOpenCost_;
+	} else
+	  score += gapExtensionCost_;
+
+	queryGap = true;
+	queryMissing = false;
+      } else if (query[i] == Character::MISSING) {
+	queryGap = false;
+	queryMissing = true;	
+      } else if (isMisaligned(query[i])) {
+	if (queryMissing ||
+	    i == query.size() - 1 ||
+	    query[i + 1] == Character::MISSING) {
+	  // do not count as X
+	} else {
+	  score += misalignmentCost_;
+	}
+      } else {
+	queryGap = false;
+	queryMissing = false;
+      }
+
+      if (!queryGap && !queryMissing && !refGap && !refMissing) {
+	if (!query[i].isAmbiguity())
+	  score += weightMatrix_[ref[i].intRep()][query[i].intRep()];
+      }
+    }
+
+    return score;
+  }
+  
   AlignmentStats calcStats(const Sequence& ref, const Sequence& query,
 			   int frameshiftCount = 0) const
   {
@@ -175,6 +257,8 @@ public:
   {
     AlignmentStats result;
 
+    result.concordance = calcConcordance(ref, query, *this);
+    
     int queryEnd = 0;
     for (int i = query.size() - 1; i >= 0; --i) {
       if (ref[i] != Character::MISSING) {
