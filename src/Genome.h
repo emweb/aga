@@ -138,6 +138,9 @@ double calcConcordance(const Reference& alignedRef,
 
   Reference r2 = alignedRef;
   Query q2 = alignedQuery;
+  int unaligned = 0;
+  int aligned = 0;
+
   for (unsigned i = 0; i < r2.size(); ++i) {
     if (r2[i] == Character::GAP) {
       r2.erase(r2.begin() + i);
@@ -145,14 +148,19 @@ double calcConcordance(const Reference& alignedRef,
       --i;
     } else if (q2[i] != Character::MISSING &&
 	       q2[i] != Character::GAP) {
-      q2[i] = r2[i];
+      if (r2[i] != Character::MISSING) {
+	++aligned;
+	q2[i] = r2[i];
+      } else
+	++unaligned;
     }
   }
 
   double perfectScore = scorer.calcScore(r2, q2);
 
   if (perfectScore > 0)
-    return score / perfectScore * 100;
+    return ((double)aligned / (aligned + unaligned))
+      * score / perfectScore * 100;
   else
     return 0;
 }

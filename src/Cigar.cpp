@@ -37,7 +37,7 @@ int Cigar::findAlignedPos(int refPos) const
       aPos += item.length();
       break;
     case CigarItem::QuerySkipped:
-      // aPos += item.length();
+      aPos += item.length();
       break;
     }
   }
@@ -70,8 +70,9 @@ void Cigar::align(seq::NTSequence& ref, seq::NTSequence& query) const
       query.insert(query.begin() + pos, item.length(), seq::Nucleotide::MISSING);
       break;
     case CigarItem::QuerySkipped:
-      query.erase(query.begin() + pos, query.begin() + pos + item.length());
-      pos -= item.length();
+      //query.erase(query.begin() + pos, query.begin() + pos + item.length());
+      //pos -= item.length();
+      ref.insert(ref.begin() + pos, item.length(), seq::Nucleotide::MISSING);
     }
 
     pos += item.length();
@@ -96,11 +97,25 @@ Cigar Cigar::createFromAlignment(const seq::NTSequence& ref,
 	current = CigarItem(CigarItem::RefGap);
       } else
 	current.add();
-    } else if (q == seq::Nucleotide::GAP || q == seq::Nucleotide::MISSING) {
+    } else if (r == seq::Nucleotide::MISSING) {
+      if (current.op() != CigarItem::QuerySkipped) {
+	if (current.length() > 0) 
+	  alignment.push_back(current);
+	current = CigarItem(CigarItem::QuerySkipped);
+      } else
+	current.add();
+    } else if (q == seq::Nucleotide::GAP) {
       if (current.op() != CigarItem::QueryGap) {
 	if (current.length() > 0) 
 	  alignment.push_back(current);
 	current = CigarItem(CigarItem::QueryGap);
+      } else
+	current.add();
+    } else if (q == seq::Nucleotide::MISSING) {
+      if (current.op() != CigarItem::RefSkipped) {
+	if (current.length() > 0) 
+	  alignment.push_back(current);
+	current = CigarItem(CigarItem::RefSkipped);
       } else
 	current.add();
     } else {
