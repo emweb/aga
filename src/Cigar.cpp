@@ -212,6 +212,55 @@ int Cigar::queryEnd() const
   return lastQueryMatch;
 }
 
+void Cigar::trimQuery(seq::NTSequence& query)
+{
+  for (int i = 0; i < size(); ++i) {
+    CigarItem& item = (*this)[i];
+    bool done = false;
+    switch (item.op()) {
+    case CigarItem::RefSkipped:
+      break;
+
+    case CigarItem::QuerySkipped:
+      query.erase(query.begin(), query.begin() + item.length());
+      erase(begin() + i);
+      done = true;
+      break;
+
+    default:
+      done = true;
+    }
+
+    if (done)
+      break;
+  }
+
+  for (int j = 0; j < size(); ++j) {
+    int i = size() - j - 1;
+    CigarItem& item = (*this)[i];
+    bool done = false;
+    switch (item.op()) {
+    case CigarItem::RefSkipped:
+      break;
+
+    case CigarItem::QuerySkipped:
+      {
+	int pos = query.size() - item.length();
+	query.erase(query.begin() + pos, query.end());
+	erase(begin() + i);
+	done = true;
+      }
+      break;
+
+    default:
+      done = true;
+    }
+
+    if (done)
+      break;
+  }
+}
+
 void Cigar::trimQueryStart(int alignmentLength)
 {
   int remain = alignmentLength;
