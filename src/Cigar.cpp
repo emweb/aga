@@ -212,52 +212,36 @@ int Cigar::queryEnd() const
   return lastQueryMatch;
 }
 
-void Cigar::trimQuery(seq::NTSequence& query)
+void Cigar::removeUnalignedQuery(seq::NTSequence& query)
 {
+  int qpos = 0;
+
   for (int i = 0; i < size(); ++i) {
     CigarItem& item = (*this)[i];
-    bool done = false;
     switch (item.op()) {
+    case CigarItem::Match:
+      qpos += item.length();
+      break;
+
+    case CigarItem::RefGap:
+      qpos += item.length();
+      break;
+
+    case CigarItem::QueryGap:
+      break;
+
     case CigarItem::RefSkipped:
       break;
 
     case CigarItem::QuerySkipped:
-      query.erase(query.begin(), query.begin() + item.length());
+      query.erase(query.begin() + qpos, query.begin() + qpos + item.length());
       erase(begin() + i);
-      done = true;
+      --i;
       break;
 
     default:
-      done = true;
+      break;
     }
-
-    if (done)
-      break;
-  }
-
-  for (int j = 0; j < size(); ++j) {
-    int i = size() - j - 1;
-    CigarItem& item = (*this)[i];
-    bool done = false;
-    switch (item.op()) {
-    case CigarItem::RefSkipped:
-      break;
-
-    case CigarItem::QuerySkipped:
-      {
-	int pos = query.size() - item.length();
-	query.erase(query.begin() + pos, query.end());
-	erase(begin() + i);
-	done = true;
-      }
-      break;
-
-    default:
-      done = true;
-    }
-
-    if (done)
-      break;
   }
 }
 
