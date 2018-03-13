@@ -427,6 +427,8 @@ Cigar Cigar::fromString(const std::string& s)
     std::string lens;
     while (isdigit(s[i]))
       lens += s[i++];
+    if (lens.empty())
+      throw std::runtime_error("Illegal CIGAR format");
     char sop = s[i];
     int len = std::stoi(lens);
 
@@ -438,7 +440,7 @@ Cigar Cigar::fromString(const std::string& s)
     case 'X': op = CigarItem::RefSkipped; break;
     case 'O': op = CigarItem::QuerySkipped; break;
     default:
-      std::cerr << "Oops, unknown op: " << sop << std::endl;
+      throw std::runtime_error("Illegal CIGAR format, unknown op: " + sop);
     }
 
     result.push_back(CigarItem(op, len));
