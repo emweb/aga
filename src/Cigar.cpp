@@ -12,11 +12,21 @@ int Cigar::findAlignedPos(int refPos) const
   /*
    * Finds alignment position which matches refPos
    */
+  int alignmentStartItem = 0;
+
+  for (unsigned i = 0; i < size(); ++i) {
+    auto& item = (*this)[i];
+
+    if (item.op() == CigarItem::QueryWrap) {
+      alignmentStartItem = i + 1;
+      break;
+    }
+  }
   
   unsigned aPos = 0;
   unsigned refI = 0;
 
-  for (unsigned i = 0; i < size(); ++i) {
+  for (unsigned i = alignmentStartItem; i < size(); ++i) {
     auto& item = (*this)[i];
 
     switch (item.op()) {
@@ -39,6 +49,41 @@ int Cigar::findAlignedPos(int refPos) const
     case CigarItem::QuerySkipped:
       aPos += item.length();
       break;
+    case CigarItem::QueryWrap:
+      i = size();
+      break;
+    }
+  }
+
+  if (alignmentStartItem > 0) {
+    aPos -= refI;
+    for (unsigned i = 0; i < alignmentStartItem - 1; ++i) {
+      auto& item = (*this)[i];
+
+      switch (item.op()) {
+      case CigarItem::Match:
+	if (refPos < refI + item.length())
+	  return aPos + (refPos - refI);
+	refI += item.length();
+	aPos += item.length();
+	break;
+      case CigarItem::RefGap:
+	aPos += item.length();
+	break;
+      case CigarItem::QueryGap:
+      case CigarItem::RefSkipped:
+	if (refPos < refI + item.length())
+	  return aPos + (refPos - refI);
+	refI += item.length();
+	aPos += item.length();
+	break;
+      case CigarItem::QuerySkipped:
+	aPos += item.length();
+	break;
+      case CigarItem::QueryWrap:
+	i = size();
+	break;
+      }
     }
   }
   
@@ -53,6 +98,8 @@ int Cigar::findAlignedPos(int refPos) const
 void Cigar::align(seq::NTSequence& ref, seq::NTSequence& query) const
 {
   unsigned pos = 0;
+  int querySaldo = 0;
+  bool wrapped = false;
 
   for (unsigned i = 0; i < size(); ++i) {
     auto& item = (*this)[i];
@@ -61,21 +108,40 @@ void Cigar::align(seq::NTSequence& ref, seq::NTSequence& query) const
     case CigarItem::Match:
       break;
     case CigarItem::RefGap:
-      ref.insert(ref.begin() + pos, item.length(), seq::Nucleotide::GAP);	
+      ref.insert(ref.begin() + pos, item.length(), seq::Nucleotide::GAP);
+      querySaldo += item.length();
       break;
     case CigarItem::QueryGap:
       query.insert(query.begin() + pos, item.length(), seq::Nucleotide::GAP);
+      querySaldo -= item.length();
       break;
     case CigarItem::RefSkipped:
       query.insert(query.begin() + pos, item.length(), seq::Nucleotide::MISSING);
+      querySaldo -= item.length();
       break;
     case CigarItem::QuerySkipped:
-      //query.erase(query.begin() + pos, query.begin() + pos + item.length());
-      //pos -= item.length();
       ref.insert(ref.begin() + pos, item.length(), seq::Nucleotide::MISSING);
+      querySaldo += item.length();
+      break;
+    case CigarItem::QueryWrap:
+      querySaldo = 0;
+      wrapped = true;
+      for (unsigned j = pos; j < query.size(); ++j)
+	query[j - pos] = query[j];
+      query.erase(query.begin() + pos, query.end());
+      pos = 0;
+      break;
     }
 
     pos += item.length();
+  }
+
+  if (wrapped) {
+    if (querySaldo > 0) {
+      query.insert(query.begin() + pos, querySaldo, seq::Nucleotide::MISSING);
+    } else if (querySaldo < 0) {
+      query.erase(query.begin() + pos, query.begin() + pos - querySaldo);
+    }
   }
 }
 
@@ -306,6 +372,10 @@ void Cigar::trimQueryStart(int alignmentLength)
       }
       break;
 
+    case CigarItem::QueryWrap:
+      remain = 0;
+      break;
+      
     default:
       break;
     }
@@ -389,6 +459,10 @@ void Cigar::trimQueryEnd(int alignmentLength)
       }
       break;
 
+    case CigarItem::QueryWrap:
+      remain = 0;
+      break;
+
     default:
       break;
     }
@@ -427,21 +501,27 @@ Cigar Cigar::fromString(const std::string& s)
     std::string lens;
     while (isdigit(s[i]))
       lens += s[i++];
-    if (lens.empty())
-      throw std::runtime_error("Illegal CIGAR format");
-    char sop = s[i];
-    int len = std::stoi(lens);
 
     CigarItem::Op op = CigarItem::Match;
+    char sop = s[i];
     switch (sop) {
     case 'M': op = CigarItem::Match; break;
     case 'I': op = CigarItem::RefGap; break;
     case 'D': op = CigarItem::QueryGap; break;
     case 'X': op = CigarItem::RefSkipped; break;
     case 'O': op = CigarItem::QuerySkipped; break;
+    case 'W': op = CigarItem::QueryWrap; break;
     default:
       throw std::runtime_error("Illegal CIGAR format, unknown op: " + sop);
     }
+
+    int len = 0;
+    if (op != CigarItem::QueryWrap) {
+      if (lens.empty())
+	throw std::runtime_error("Illegal CIGAR format");
+      len = std::stoi(lens);
+    } else if (op == CigarItem::QueryWrap && !lens.empty())
+      throw std::runtime_error("Illegal CIGAR format");
 
     result.push_back(CigarItem(op, len));
   }
@@ -449,11 +529,92 @@ Cigar Cigar::fromString(const std::string& s)
   return result;
 }
 
+void Cigar::removeLastRefSkipped()
+{
+  for (unsigned i = 0; i < size(); ++i) {
+    auto& item = (*this)[size() - i - 1];
+
+    if (item.op() == CigarItem::RefSkipped) {
+      erase(begin() + size() - i - 1);
+      return;
+    }
+  }
+}
+
+void Cigar::wrapAround(int refPos)
+{
+  unsigned refI = 0;
+
+  for (unsigned i = 0; i < size(); ++i) {
+    auto& item = (*this)[i];
+
+    switch (item.op()) {
+    case CigarItem::Match:
+      if (refPos < refI + item.length()) {
+	// split match in two parts
+	bool isLast = i == size() - 1;
+	int p1 = refPos - refI;
+	int p2 = item.length() - p1;
+	erase(begin() + i);
+	if (p1 != 0) {
+	  insert(begin() + i, CigarItem(CigarItem::Match, p1));
+	  ++i;
+	}
+	if (!(isLast && p2 == 0)) {
+	  insert(begin() + i, CigarItem(CigarItem::QueryWrap, 0));
+	  ++i;
+	  if (p2 != 0) {
+	    insert(begin() + i, CigarItem(CigarItem::Match, p2));
+	  }
+	  removeLastRefSkipped();
+	}
+	return;
+      }
+      refI += item.length();
+      break;
+    case CigarItem::RefGap:
+      break;
+    case CigarItem::QueryGap:
+    case CigarItem::RefSkipped:
+      if (refPos < refI + item.length()) {
+	// split query gap/missing in two parts
+	bool isLast = i == size() - 1;
+	int p1 = refPos - refI;
+	int p2 = item.length() - p1;
+	CigarItem::Op op = item.op();
+	erase(begin() + i);
+	if (p1 != 0) {
+	  insert(begin() + i, CigarItem(op, p1));
+	  ++i;
+	}
+	if (!isLast) {
+	  insert(begin() + i, CigarItem(CigarItem::QueryWrap, 0));
+	  ++i;
+	  if (p2 != 0) {
+	    insert(begin() + i, CigarItem(op, p2));
+	  }
+	  removeLastRefSkipped();
+	}
+	return;
+      }
+      refI += item.length();
+      break;
+    case CigarItem::QuerySkipped:
+      break;
+    case CigarItem::QueryWrap:
+      assert(false);
+    }
+  }
+}
+
 std::ostream& operator<<(std::ostream& o, const CigarItem& c)
 {
   static char charS[] = { 'M', 'I', 'D', 'X', 'O' };
-  
-  o << c.length() << charS[c.op()];
+
+  if (c.op() == CigarItem::QueryWrap)
+    o << 'W';
+  else
+    o << c.length() << charS[c.op()];
 
   return o;
 }

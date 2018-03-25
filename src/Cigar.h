@@ -20,7 +20,8 @@ struct CigarItem
     RefGap = 1,
     QueryGap = 2,
     RefSkipped = 3,
-    QuerySkipped = 4
+    QuerySkipped = 4,
+    QueryWrap = 5
   };
 
   CigarItem(Op op)
@@ -127,6 +128,8 @@ struct Cigar : public std::vector<CigarItem>
 
   void trimQueryStart(int alignmentLength);
   void trimQueryEnd(int alignmentLength);
+
+  void wrapAround(int pos);
   
   std::string str() const;
   static Cigar fromString(const std::string& s);
@@ -134,6 +137,9 @@ struct Cigar : public std::vector<CigarItem>
   friend void swap(Cigar& a, Cigar& b) {
     std::swap((std::vector<CigarItem>&)a, (std::vector<CigarItem>&)b);
   }
+
+private:
+  void removeLastRefSkipped();
 };
 
 extern std::ostream& operator<<(std::ostream& o, const Cigar& c);

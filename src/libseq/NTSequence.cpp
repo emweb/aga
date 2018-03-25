@@ -117,9 +117,9 @@ void readFastaEntry(std::istream& i,
   throw (ParseException)
 {
     char ch;
-    char c[512];
+    char c[64*1024];
 
-    i.getline(c, 511);
+    i.getline(c, 64*1024-1);
     if (i) {
       if (c[0] != '>') {
 	throw ParseException(std::string(),
