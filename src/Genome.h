@@ -130,7 +130,8 @@ extern Genome readGenome(const std::string& fasta, const std::string& cds,
 template <class Scorer, class Reference, class Query>
 double calcConcordance(const Reference& alignedRef,
 		       const Query& alignedQuery,
-		       const Scorer& scorer)
+		       const Scorer& scorer,
+		       bool penalizeUnaligned)
 {
   typedef typename Reference::value_type Character;
   
@@ -152,7 +153,8 @@ double calcConcordance(const Reference& alignedRef,
 	++aligned;
 	q2[i] = r2[i];
       } else
-	++unaligned;
+	if (penalizeUnaligned)
+	  ++unaligned;
     }
   }
 

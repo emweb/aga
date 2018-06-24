@@ -182,6 +182,10 @@ public:
     bool refMissing = true;
 
     for (unsigned i = 0; i < queryEnd; ++i) {
+      if ((ref[i] == Character::GAP || ref[i] == Character::MISSING) &&
+	  (query[i] == Character::GAP || query[i] == Character::MISSING))
+	continue;
+
       if (ref[i] == Character::GAP) {
 	if (!refGap) {
 	  score += gapOpenCost_;
@@ -240,24 +244,24 @@ public:
   }
   
   AlignmentStats calcStats(const Sequence& ref, const Sequence& query,
-			   int frameshiftCount = 0) const
+			   int frameshiftCount = 0, bool penalizeUnaligned = true) const
   {
-    return calcStats(ref, query, nullptr, frameshiftCount);
+    return calcStats(ref, query, nullptr, frameshiftCount, penalizeUnaligned);
   }
 
   AlignmentStats calcStats(const Sequence& ref, const Sequence& query,
 			   AlignmentScoreVector& scoreVector) const
   {
-    return calcStats(ref, query, &scoreVector, 0);
+    return calcStats(ref, query, &scoreVector, 0, true);
   }
 
   AlignmentStats calcStats(const Sequence& ref, const Sequence& query,
 			   AlignmentScoreVector *scoreVector,
-			   int frameshiftCount) const
+			   int frameshiftCount, bool penalizeUnaligned) const
   {
     AlignmentStats result;
 
-    result.concordance = calcConcordance(ref, query, *this);
+    result.concordance = calcConcordance(ref, query, *this, penalizeUnaligned);
     
     int queryEnd = 0;
     for (int i = query.size() - 1; i >= 0; --i) {
@@ -279,7 +283,12 @@ public:
 
     int refPos = 0;
     for (unsigned i = 0; i < queryEnd; ++i) {
+      if ((ref[i] == Character::GAP || ref[i] == Character::MISSING) &&
+	  (query[i] == Character::GAP || query[i] == Character::MISSING))
+	continue;
+
       int score = 0;
+      
       if (ref[i] == Character::GAP) {
 	++result.insertCount;
 	if (!refGap) {

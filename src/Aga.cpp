@@ -111,7 +111,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 	solution.cigar.align(alignedRef, alignedQuery);
 
 	concordance = calcConcordance(alignedRef, alignedQuery,
-				      aligner.scorer());
+				      aligner.scorer(), true);
       }
       
       std::cout << std::endl
