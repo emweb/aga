@@ -237,7 +237,7 @@ public:
 
     double aaScore = 0;
     for (const auto& a : aaAlignments)
-      aaScore += aaScorer_.calcScore(a.ref.aaSequence(), a.query.aaSequence());
+      aaScore += aaScorer_.calcScore(a.ref.aaSequence, a.query.aaSequence);
 
     return ntScore + aaScore;
   }

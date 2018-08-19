@@ -25,8 +25,103 @@ void removeGaps(seq::NTSequence& s)
   }
 }
 
+void realignGaps(const SimpleScorer<seq::NTSequence>& nucleotideScorer,
+		 seq::NTSequence& ref, seq::NTSequence& query)
+{
+  // This relaxes nucleotides at codon boundaries. These may have been
+  // forced in the nucleotide sequence based codon boundaries, but the insertion
+  // is equally likely shifted by up to 2 nucleotides.
+
+  int gapLength = -1;
+  bool refGap = false;
+  for (unsigned i = 3; i < ref.size() - 3; ++i) {
+    if (ref[i] == seq::Nucleotide::GAP) {
+      if (gapLength >= 0)
+	++gapLength;
+      refGap = true;
+    } else if (query[i] == seq::Nucleotide::GAP) {
+      if (gapLength >= 0)
+	++gapLength;
+      refGap = false;
+    } else {
+      if (gapLength > 0 && gapLength % 3 == 0) {
+	double variants[5];
+
+	{
+	  // abc------def
+	  // abcxyzxyzdef
+	  seq::NTSequence ref1(ref.begin() + (i - gapLength - 3),
+			       ref.begin() + (i + 3));
+
+	  seq::NTSequence query1(query.begin() + (i - gapLength - 3),
+				 query.begin() + (i + 3));
+
+	  variants[0] = nucleotideScorer.calcScore(ref1, query1);
+
+	  // std::cerr << "0: " << variants[0] << std::endl << ref1 << query1;
+
+	  auto& s = refGap ? ref1 : query1;
+
+	  for (int j = 1; j <= 2; ++j) {
+	    std::swap(s[3 - j], s[3 + gapLength - j]);
+	    variants[j] = nucleotideScorer.calcScore(ref1, query1);
+	    // std::cerr << j << ": " << variants[j] << std::endl << ref1 << query1;
+	  }
+
+	  // swap back
+	  for (int j = 1; j <= 2; ++j)
+	    std::swap(s[3 - j], s[3 + gapLength - j]);
+
+	  for (int j = 0; j <= 1; ++j) {
+	    std::swap(s[3 + j], s[3 + gapLength + j]);
+	    variants[3 + j] = nucleotideScorer.calcScore(ref1, query1);
+	    // std::cerr << 3 + j << ": " << variants[3 + j] << std::endl << ref1 << query1;
+	  }
+	}
+
+	// max score, break tie with lower j
+	double max = variants[0];
+	int maxJ = 0;
+	for (int j = 1; j < 5; ++j) {
+	  if (variants[j] > max) {
+	    max = variants[j];
+	    maxJ = j;
+	  }
+	}
+
+	auto& s = refGap ? ref : query;
+
+	// std::cerr << "correcting " << i << ": " << maxJ << std::endl;
+	
+	switch (maxJ) {
+	case 0:
+	  break;
+	case 1:
+	  std::swap(s[i - 1], s[i - gapLength - 1]);
+	  break;
+	case 2: 
+	  std::swap(s[i - 1], s[i - gapLength - 1]);
+	  std::swap(s[i - 2], s[i - gapLength - 2]);
+	  break;
+	case 3:
+	  std::swap(s[i], s[i - gapLength]);
+	  ++i;
+	  break;
+	case 4:
+	  std::swap(s[i], s[i - gapLength]);
+	  std::swap(s[i + 1], s[i - gapLength + 1]);
+	  i += 2;
+	  break;
+	}
+      }
+      gapLength = 0;
+    }
+  }
+}
+
 template<typename Aligner>
 void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
+	    bool strictCodonBoundaries,
 	    const std::vector<CdsFeature>& proteins,
 	    const std::string& ntAlignmentFile,
 	    const std::string& cdsAlignmentsFile,
@@ -53,9 +148,18 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 
     typename Aligner::Solution solution;
 
-    if (query.size() > 0)
+    if (query.size() > 0) {
       solution = aligner.align(ref, NTSequence6AA(query), 0);
-    else {
+
+      if (!strictCodonBoundaries) {
+	seq::NTSequence seq1 = ref;
+	seq::NTSequence seq2 = query;
+	solution.cigar.align(seq1, seq2);
+
+	realignGaps(aligner.scorer().nucleotideScorer(), seq1, seq2);
+	solution.cigar = Cigar::createFromAlignment(seq1, seq2);
+      }
+    } else {
       solution.score = 0;
       solution.cigar.push_back(CigarItem(CigarItem::RefSkipped, ref.size()));
     }
@@ -78,6 +182,11 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
       std::vector<CDSAlignment> aaAlignments
 	= getCDSAlignments(ref, ref.cdsFeatures(), query, solution.cigar, true);
 
+      if (!strictCodonBoundaries) {
+	for (auto& c : aaAlignments)
+	  optimizeMisaligned(c, aligner.scorer().aminoAcidScorer());
+      }
+
       std::ofstream aa;
       if (!cdsAlignmentsFile.empty())
 	aa.open(cdsAlignmentsFile);
@@ -91,16 +200,16 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
       std::cout << std::endl << "CDS alignments:" << std::endl;
       for (const auto& a : aaAlignments) {
 	if (aa.is_open())
-	  aa << a.ref.aaSequence() << a.query.aaSequence();
+	  aa << a.ref.aaSequence << a.query.aaSequence;
 	if (nt.is_open())
-	  nt << a.ref.ntSequence() << a.query.ntSequence();
-	auto aaStats = calcStats(a.ref.aaSequence(), a.query.aaSequence(),
+	  nt << a.ref.ntSequence << a.query.ntSequence;
+	auto aaStats = calcStats(a.ref.aaSequence, a.query.aaSequence,
 				 aligner.scorer().aminoAcidScorer(),
 				 a.refFrameshifts.size() + a.queryFrameshifts);
 
 	aaScore += aaStats.score;
 	if (aaStats.coverage > 0)
-	  std::cout << " AA " << a.ref.aaSequence().name()
+	  std::cout << " AA " << a.ref.aaSequence.name()
 		    << ": " << aaStats << std::endl;
       }
 
@@ -125,6 +234,11 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
       std::vector<CDSAlignment> aaAlignments
 	= getCDSAlignments(ref, proteins, query, solution.cigar, true);
 
+      if (!strictCodonBoundaries) {
+	for (auto& c : aaAlignments)
+	  optimizeMisaligned(c, aligner.scorer().aminoAcidScorer());
+      }
+
       std::ofstream aa;
       if (!proteinAlignemntsFile.empty())
 	aa.open(proteinAlignemntsFile);
@@ -136,15 +250,15 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
       std::cout << std::endl << "Protein Product alignments:" << std::endl;
       for (const auto& a : aaAlignments) {
 	if (aa.is_open())
-	  aa << a.ref.aaSequence() << a.query.aaSequence();
+	  aa << a.ref.aaSequence << a.query.aaSequence;
 	if (nt.is_open())
-	  nt << a.ref.ntSequence() << a.query.ntSequence();
+	  nt << a.ref.ntSequence << a.query.ntSequence;
 
-	auto aaStats = calcStats(a.ref.aaSequence(), a.query.aaSequence(),
+	auto aaStats = calcStats(a.ref.aaSequence, a.query.aaSequence,
 				 aligner.scorer().aminoAcidScorer(),
 				 a.refFrameshifts.size() + a.queryFrameshifts);
 	if (aaStats.coverage > 0)
-	  std::cout << " AA " << a.ref.aaSequence().name()
+	  std::cout << " AA " << a.ref.aaSequence.name()
 		    << ": " << aaStats << std::endl;
       }
     }
@@ -267,6 +381,13 @@ int main(int argc, char **argv)
     (aaGroup, "COST",
      "Codon misalignment penalty (default=-20)",
      {"aa-misalign"}, -20);
+
+  args::Group generalGroup(parser, "General alignment options",
+			   args::Group::Validators::DontCare);
+
+  args::Flag strictCodonBoundaries(generalGroup, "strict-codon-boundaries",
+				   "Do not optimize at codon boundaries",
+				   {"strict-codon-boundaries"});
 
   args::Group aaOutputGroup(parser, "Amino acid alignments output",
 			    args::Group::Validators::DontCare);
@@ -402,12 +523,14 @@ int main(int argc, char **argv)
 
   if (local) {
     LocalAligner<GenomeScorer, Genome, NTSequence6AA, 3> aligner(genomeScorer);
-    runAga(aligner, ref, queriesFile, proteins, args::get(ntAlignment),
+    runAga(aligner, ref, queriesFile, strictCodonBoundaries,
+	   proteins, args::get(ntAlignment),
 	   args::get(cdsOutput), args::get(proteinOutput),
 	   args::get(cdsNtOutput), args::get(proteinNtOutput));
   } else {
     GlobalAligner<GenomeScorer, Genome, NTSequence6AA, 3> aligner(genomeScorer);
-    runAga(aligner, ref, queriesFile, proteins, args::get(ntAlignment),
+    runAga(aligner, ref, queriesFile, strictCodonBoundaries,
+	   proteins, args::get(ntAlignment),
 	   args::get(cdsOutput), args::get(proteinOutput),
 	   args::get(cdsNtOutput), args::get(proteinNtOutput));
   }

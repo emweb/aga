@@ -10,7 +10,6 @@
 #include <vector>
 #include "AASequence.h"
 #include "NTSequence.h"
-#include "CodingSequence.h"
 #include "Cigar.h"
 #include "SimpleScorer.h"
 
@@ -90,13 +89,24 @@ private:
   int scoreFactor_;
 };
 
+struct CodingSequence {
+  seq::NTSequence ntSequence;
+  seq::AASequence aaSequence;
+
+  CodingSequence();
+  CodingSequence(const seq::NTSequence& ntSequence);
+};
+
 struct CDSAlignment
 {
   std::set<int> refFrameshifts;
   std::set<int> refMisAlignedGaps;
   int queryFrameshifts;
-  seq::CodingSequence ref, query;
+  CodingSequence ref, query;
 };
+
+extern void optimizeMisaligned(CDSAlignment& alignment,
+			       const SimpleScorer<seq::AASequence>& scorer);
 
 extern std::vector<CDSAlignment> getCDSAlignments
   (const seq::NTSequence& ref,

@@ -10,7 +10,7 @@ SET(LIB_SOURCES
 ADD_LIBRARY(agalib ${LIB_SOURCES})
 
 ADD_EXECUTABLE(aga Aga.cpp)
-TARGET_LINK_LIBRARIES(aga seq agalib)
+TARGET_LINK_LIBRARIES(aga agalib seq)
 
 INSTALL_TARGETS(/lib agalib)
 INSTALL_TARGETS(/bin aga)

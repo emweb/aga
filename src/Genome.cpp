@@ -170,6 +170,16 @@ bool CdsFeature::contains(const CdsFeature& other) const
   return true;
 }
 
+CodingSequence::CodingSequence()
+{ }
+
+CodingSequence::CodingSequence(const seq::NTSequence& aNtSequence)
+  : ntSequence(aNtSequence)
+{
+  seq::CodingSequence codingSeq(ntSequence);
+  aaSequence = codingSeq.aaSequence();
+}
+
 Genome::Genome()
 { }
 
@@ -363,10 +373,10 @@ getCDSAlignments(const Cigar& alignment, const seq::NTSequence& ref,
 	    ++queryFrameshifts;
 	  currentQueryGap = 0;
 	} else if (currentRefGap > 0 && currentRefGap % 3 == 0 && i % 3 != 0)
-	  refMisAlignedGaps.insert(i / 3);
+	  refMisAlignedGaps.insert(i / 3); // codon-misaligned gap X--X
 
 	if (currentRefGap % 3 != 0 && i % 3 != currentRefGap % 3)
-	  refMisAlignedGaps.insert(i / 3);
+	  refMisAlignedGaps.insert(i / 3); // frameshift gap in ref: X
 	
 	while (currentRefGap % 3 != 0) {
 	  cdsRef.insert(cdsRef.begin() + i, seq::Nucleotide::GAP);
@@ -387,8 +397,8 @@ getCDSAlignments(const Cigar& alignment, const seq::NTSequence& ref,
 
     CDSAlignment cdsAa;
     cdsRef.setName(f.aaSeq.name());
-    cdsAa.ref = seq::CodingSequence(cdsRef);
-    cdsAa.query = seq::CodingSequence(cdsQuery);
+    cdsAa.ref = CodingSequence(cdsRef);
+    cdsAa.query = CodingSequence(cdsQuery);
     cdsAa.refFrameshifts = refFrameshiftsCorrected;
     cdsAa.refMisAlignedGaps = refMisAlignedGaps;
     cdsAa.queryFrameshifts = queryFrameshifts;
@@ -491,3 +501,80 @@ Genome readGenome(const std::string& fasta, const std::string& cds,
 
   return result;
 }
+
+void optimizeMisaligned(CDSAlignment& alignment,
+			const SimpleScorer<seq::AASequence>& scorer)
+{
+  /*
+   * When amino acid not at codon boundary: fix by merging two X'es
+   * into one amino acid and one GAP, run here or as a post-processing
+   * on a single CDSAlignment provided we break ties systematically in
+   * the same way to have same protein and CDS result
+   */
+  int gapLength = -1;
+  bool refGap = false;
+
+  seq::NTSequence& ntRef = alignment.ref.ntSequence;
+  seq::AASequence& aaRef = alignment.ref.aaSequence;
+  seq::NTSequence& ntQuery = alignment.query.ntSequence;
+  seq::AASequence& aaQuery = alignment.query.aaSequence;
+
+  for (unsigned i = 0; i < ntRef.size(); ++i) {
+    if (ntRef[i] == seq::Nucleotide::GAP) {
+      if (gapLength >= 0)
+	++gapLength;
+      refGap = true;
+    } else if (ntQuery[i] == seq::Nucleotide::GAP) {
+      if (gapLength >= 0)
+	++gapLength;
+      refGap = false;
+    } else {
+      if (gapLength > 0 && gapLength % 3 == 0 && i % 3 != 0) {
+	// assemble amino acid
+	seq::NTSequence& ntEdit = refGap ? ntRef : ntQuery;
+	seq::AASequence& aaEdit = refGap ? aaRef : aaQuery;
+	seq::NTSequence& ntOther = refGap ? ntQuery : ntRef;
+	seq::AASequence& aaOther = refGap ? aaQuery : aaRef;
+
+	int aa1 = (i - gapLength - (i % 3)) / 3;
+	int aa2 = (i - (i % 3)) / 3;
+
+	if (refGap) {
+	  alignment.refMisAlignedGaps.erase(aa1);
+	  alignment.refMisAlignedGaps.erase(aa2);
+	}
+
+	seq::NTSequence codon;
+	for (int j = 0; j < i % 3; ++j)
+	  codon.push_back(ntEdit[i - gapLength - (i % 3) + j]);
+	for (int j = i % 3; j < 3; ++j)
+	  codon.push_back(ntEdit[i + j]);
+	
+	seq::AminoAcid editAa = seq::Codon::translate(codon.begin());
+
+	seq::AminoAcid otherAa1 = aaOther[aa1];
+	seq::AminoAcid otherAa2 = aaOther[aa2];
+
+	int score1 = scorer.scoreExtend(otherAa1, editAa);
+	int score2 = scorer.scoreExtend(otherAa2, editAa);
+
+	codon.setName(aaRef.name() + " codon " + std::to_string(aa1));
+	// std::cerr << codon;
+
+	// std::cerr << editAa << " vs " << otherAa1 << " (" << score1 << "), "
+	//	     << otherAa2 << " (" << score2 << ")" << std::endl;
+	
+	if (score2 > score1) {
+	  aaEdit[aa1] = seq::AminoAcid::GAP;
+	  aaEdit[aa2] = editAa;
+	} else {
+	  aaEdit[aa1] = editAa;
+	  aaEdit[aa2] = seq::AminoAcid::GAP;
+	}
+      }
+
+      gapLength = 0;
+    }
+  }
+}
+
