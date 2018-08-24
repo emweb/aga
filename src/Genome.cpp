@@ -505,6 +505,42 @@ Genome readGenome(const std::string& fasta, const std::string& cds,
 void optimizeMisaligned(CDSAlignment& alignment,
 			const SimpleScorer<seq::AASequence>& scorer)
 {
+  /* First fix the reference, moving a singleton nucleotide to one side */
+  seq::NTSequence& ntRef = alignment.ref.ntSequence;
+  seq::AASequence& aaRef = alignment.ref.aaSequence;
+
+  int gapLength = -1;
+  for (unsigned i = 0; i < ntRef.size(); ++i) {
+    if (ntRef[i] == seq::Nucleotide::GAP) {
+      if (gapLength >= 0)
+	++gapLength;
+    } else {
+      if (gapLength > 0 && gapLength % 3 == 0 && i % 3 != 0) {
+	int aa1 = (i - gapLength - (i % 3)) / 3;
+	int aa2 = (i - (i % 3)) / 3;
+
+	seq::NTSequence refCodon;
+	for (int j = 0; j < i % 3; ++j) {
+	  refCodon.push_back(ntRef[i - gapLength - (i % 3) + j]);
+	}
+
+	for (int j = i % 3; j < 3; ++j) {
+	  refCodon.push_back(ntRef[i - (i % 3) + j]);
+	}
+
+	seq::AminoAcid refAa = seq::Codon::translate(refCodon.begin());
+	if (i % 3 == 1) {
+	  aaRef[aa1] = seq::AminoAcid::GAP;
+	  aaRef[aa2] = refAa;
+	} else {
+	  aaRef[aa1] = refAa;
+	  aaRef[aa2] = seq::AminoAcid::GAP;
+	}
+      }
+      gapLength = 0;
+    }
+  }
+    
   /*
    * When amino acid not at codon boundary: fix by merging two X'es
    * into one amino acid and one GAP, run here or as a post-processing
@@ -548,7 +584,7 @@ void optimizeMisaligned(CDSAlignment& alignment,
 	for (int j = 0; j < i % 3; ++j)
 	  codon.push_back(ntEdit[i - gapLength - (i % 3) + j]);
 	for (int j = i % 3; j < 3; ++j)
-	  codon.push_back(ntEdit[i + j]);
+	  codon.push_back(ntEdit[i - (i % 3) + j]);
 	
 	seq::AminoAcid editAa = seq::Codon::translate(codon.begin());
 
@@ -577,4 +613,3 @@ void optimizeMisaligned(CDSAlignment& alignment,
     }
   }
 }
-
