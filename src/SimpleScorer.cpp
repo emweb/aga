@@ -49,7 +49,7 @@ void asJson(std::ostream& o, const std::string& id, const AlignmentStats& stats,
     << "\"cdsBegin\" : " << cdsBegin << ", "
     << "\"cdsEnd\" : " << cdsEnd;
 
-  if (alignLength != 0) {
+  if (stats.matchCount > 0) {
     o << ", "
       << "\"begin\" : " << (stats.begin + 1) << ", "
       << "\"end\" : " << stats.end << ", "
