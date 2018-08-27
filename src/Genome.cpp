@@ -547,11 +547,9 @@ void optimizeMisaligned(CDSAlignment& alignment,
    * on a single CDSAlignment provided we break ties systematically in
    * the same way to have same protein and CDS result
    */
-  int gapLength = -1;
+  gapLength = -1;
   bool refGap = false;
 
-  seq::NTSequence& ntRef = alignment.ref.ntSequence;
-  seq::AASequence& aaRef = alignment.ref.aaSequence;
   seq::NTSequence& ntQuery = alignment.query.ntSequence;
   seq::AASequence& aaQuery = alignment.query.aaSequence;
 
