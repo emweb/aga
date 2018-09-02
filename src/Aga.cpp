@@ -14,6 +14,63 @@
 #include <fstream>
 #include <ctime>
 
+struct Contig {
+  int queryOffset;
+  seq::NTSequence sequence;
+};
+
+std::vector<Contig> splitContigs(const seq::NTSequence& s)
+{
+  // if there are long stretches of Ns : then we break the sequence and treat contigs
+  // individually
+  const int STRETCH_CUTOFF = 5;
+
+  std::vector<Contig> result;
+
+  int stretchN = 0;
+  int startI = -1;
+  for (int i = 0; i < s.size(); ++i) {
+    if (s[i] == seq::Nucleotide::N) {
+      if (startI >= 0) {
+	++stretchN;
+
+	if (stretchN == STRETCH_CUTOFF) {
+	  int endI = i + 1 - STRETCH_CUTOFF;
+	  if (endI - startI > 20) {
+	    Contig c;
+	    c.sequence = seq::NTSequence(s.begin() + startI,
+					 s.begin() + i + 1 - STRETCH_CUTOFF);
+	    c.sequence.setName(s.name());
+	    c.sequence.setDescription(s.description());
+	    c.queryOffset = startI;
+	    result.push_back(c);
+	  }
+	  startI = -1;
+	}
+      }
+    } else {
+      if (startI < 0)
+	startI = i;
+      stretchN = 0;
+    }
+  }
+
+  if (startI >= 0 && startI < s.size()) {
+    Contig c;
+    c.sequence = seq::NTSequence(s.begin() + startI, s.end());
+    c.sequence.setName(s.name());
+    c.sequence.setDescription(s.description());
+    c.queryOffset = startI;
+    result.push_back(c);
+  }
+
+  std::sort(result.begin(), result.end(), [](const Contig& a, const Contig& b) {
+      return a.sequence.size() > b.sequence.size();   
+    });
+  
+  return result;
+}
+
 void removeGaps(seq::NTSequence& s)
 {
   for (int i = 0; i < s.size(); ++i) {
@@ -135,38 +192,60 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
     seq::NTSequence query;
     q >> query;
 
-    query.sampleAmbiguities();
-    removeGaps(query);
-
     if (!q)
       return;
 
-    std::cout << "Started alignment of " << query.name()
-	      << " (len="
-	      << query.size() << ") against "
-	      << ref.name() << " (len=" << ref.size() << ")" << std::endl;
+    removeGaps(query);
 
-    typename Aligner::Solution solution;
+    std::vector<Contig> contigs = splitContigs(query);
 
-    if (query.size() > 0) {
-      solution = aligner.align(ref, NTSequence6AA(query), 0);
+    LocalAlignments contigAlignments;
 
-      if (!strictCodonBoundaries) {
-	seq::NTSequence seq1 = ref;
-	seq::NTSequence seq2 = query;
-	solution.cigar.align(seq1, seq2);
+    if (contigs.size() != 1)
+      std::cout << "Considering " << contigs.size() << " contigs." << std::endl;
+    
+    for (auto& c : contigs) {
+      std::cout << "Started alignment of " << c.sequence.name()
+		<< " (len="
+		<< c.sequence.size() << ") against "
+		<< ref.name() << " (len=" << ref.size() << ")" << std::endl;
 
-	realignGaps(aligner.scorer().nucleotideScorer(), seq1, seq2);
-	solution.cigar = Cigar::createFromAlignment(seq1, seq2);
+      typename Aligner::Solution solution;
+
+      if (c.sequence.size() > 0) {
+	c.sequence.sampleAmbiguities();
+	solution = aligner.align(ref, NTSequence6AA(c.sequence), 0);
+
+	if (!strictCodonBoundaries) {
+	  seq::NTSequence seq1 = ref;
+	  seq::NTSequence seq2 = c.sequence;
+	  solution.cigar.align(seq1, seq2);
+
+	  realignGaps(aligner.scorer().nucleotideScorer(), seq1, seq2);
+	  solution.cigar = Cigar::createFromAlignment(seq1, seq2);
+	}
+      } else {
+	solution.score = 0;
+	solution.cigar.push_back(CigarItem(CigarItem::RefSkipped, ref.size()));
       }
-    } else {
-      solution.score = 0;
-      solution.cigar.push_back(CigarItem(CigarItem::RefSkipped, ref.size()));
+
+      std::cout << "Aligned: " /* << solution.score / (double)ref.scoreFactor()
+				  << ": " */ << solution.cigar << std::endl;
+
+      LocalAlignment l(solution.cigar, solution.score, c.queryOffset,
+		       c.queryOffset + c.sequence.size(), ref.size());
+      contigAlignments.add(l);
     }
 
-    std::cout << "Aligned: " /* << solution.score / (double)ref.scoreFactor()
-				<< ": " */ << solution.cigar << std::endl;
+    typename Aligner::Solution solution;
+    auto p = contigAlignments.merge(ref.size(), query.size());
 
+    solution.cigar = p.first;
+    solution.score = p.second;
+
+    std::cerr << "Aligned: " << solution.cigar << " " << solution.score << std::endl;
+
+    solution.cigar.removeUnalignedQuery(query);
     saveSolution(solution.cigar, ref, query, ntAlignmentFile);
 
     /*
@@ -322,7 +401,7 @@ void saveSolution(const Cigar& cigar,
 int main(int argc, char **argv)
 {
   args::ArgumentParser parser
-    ("This is AGA, a Genomic Aligner, (c) Emweb bvba\n"
+    ("This is AGA, an Annotated Genome Aligner, (c) Emweb bvba\n"
      "See http://github.com/emweb/aga/LICENSE.txt for terms of use.",
      "AGA will compute the optimal pairwise alignment of a nucleic acid "
      "query sequence (QUERY.FASTA) against a reference genome (REFERENCE.GB), "
@@ -423,7 +502,7 @@ int main(int argc, char **argv)
       std::cerr << "Command-line help:" << std::endl << std::endl
 		<< parser;
     } else if (e.what() == version.Name()) {
-      std::cout << "AGA version 0.9" << std::endl;
+      std::cout << "AGA version 0.91" << std::endl;
     }
     return 0;
   } catch (args::ParseError e) {

@@ -10,6 +10,7 @@
 #include <limits>
 #include <algorithm>
 
+#include "LocalAlignments.h"
 #include "SubstitutionMatrix.h"
 #include "Cigar.h"
 
@@ -35,34 +36,6 @@ public:
 private:
   Scorer scorer_;
 
-  struct LocalAlignment {
-    Cigar cigar;
-    int score;
-    int refStart, refEnd;
-    int queryStart, queryEnd;
-
-    LocalAlignment()
-      : score(0),
-	refStart(0), refEnd(0),
-	queryStart(0), queryEnd(0)
-    { }
-
-    bool overlaps(const LocalAlignment& other) const {
-      return (other.refStart < refEnd && other.refEnd > refStart) ||
-	(other.queryStart < queryEnd && other.queryEnd > queryStart);
-    }
-
-    bool operator< (const LocalAlignment& other) const {
-      return refStart < other.refStart;
-    }
-
-    void print(std::ostream& o) const {
-     o << cigar << " ref:(" << refStart << "-" << refEnd << ") "
-       << " query:(" << queryStart << "-" << queryEnd << ")"
-       << " score " << score;
-    }
-  };
-
   struct ArrayItem {
     ArrayItem()
       : op(CigarItem::Match),
@@ -85,8 +58,7 @@ private:
 };
 
 template <class Scorer, class Reference, class Query, int SideN>
-typename LocalAligner<Scorer, Reference, Query, SideN>::LocalAlignment
-LocalAligner<Scorer, Reference, Query, SideN>
+LocalAlignment LocalAligner<Scorer, Reference, Query, SideN>
 ::traceBack(int stripeI, int i, int j,
 	    const std::vector<std::vector<ArrayItems>>& work,
 	    const std::vector<LocalAlignment>& column0) const
@@ -392,7 +364,7 @@ LocalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, const
   /*
    * Now convert row to a final solution:
    */
-  std::set<LocalAlignment> localAlignments;
+  LocalAlignments localAlignments;
 
   std::vector<int> refIs;
   for (unsigned i = 0; i < ref.size(); ++i)
@@ -425,33 +397,9 @@ LocalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, const
       }
     }
 
-    auto it = localAlignments.insert(best).first;
-    /* Prevent cross ordering of local alignments since we cannot represent that properly */
-    if (it != localAlignments.begin()) {
-      auto b = it;
-      --b;
-      if (b->queryEnd > best.queryStart) {
-	std::cerr << "Skipping because of cross align: ";
-	best.print(std::cerr);
-	std::cerr << std::endl;
-	localAlignments.erase(it);
-	continue;
-      }
-    }
-    {
-      auto a = it;
-      ++a;
-      if (a != localAlignments.end()) {
-	if (best.queryEnd > a->queryStart) {
-	  std::cerr << "Skipping because of cross align: ";
-	  best.print(std::cerr);
-	  std::cerr << std::endl;
-	  localAlignments.erase(it);
-	  continue;
-	}
-      }
-    }
-    
+    if (!localAlignments.add(best))
+      continue;
+        
     //std::cerr << "Adding: ";
     //best.print(std::cerr);
     //std::cerr << std::endl;
@@ -462,24 +410,7 @@ LocalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, const
   /* Merge all local alignments in single cigar + score */
   Solution result;
 
-  int refPos = 0;
-  int queryPos = 0;
-  for (auto& l : localAlignments) {
-    if (refPos < l.refStart)
-      result.cigar.push_back(CigarItem(CigarItem::RefSkipped, l.refStart - refPos));
-    if (queryPos < l.queryStart)
-      result.cigar.push_back(CigarItem(CigarItem::QuerySkipped, l.queryStart - queryPos));
-
-    result.cigar.insert(result.cigar.end(), l.cigar.begin(), l.cigar.end());
-    refPos = l.refEnd;
-    queryPos = l.queryEnd;
-    result.score += l.score;
-  }
-
-  if (refPos < ref.size())
-    result.cigar.push_back(CigarItem(CigarItem::RefSkipped, ref.size() - refPos));
-  if (queryPos < query.size())
-    result.cigar.push_back(CigarItem(CigarItem::QuerySkipped, query.size() - queryPos));    
+  std::tie(result.cigar, result.score) = localAlignments.merge(ref.size(), query.size());
 
   return result;
 }
