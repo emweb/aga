@@ -49,8 +49,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
     result[hj].cigar.addRefGap();
   }
 
-  result[0].cigar.push_back(CigarItem(CigarItem::QueryGap));
-  result[0].cigar.back().add(-1);
+  result[0].cigar.push_back(CigarItem(CigarItem::QueryGap, 0));
 
   struct ArrayItem {
     ArrayItem()
@@ -90,9 +89,9 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 
 	for (unsigned k = 0; k < SideN; ++k) {
 	  work[0][hj].P[k].score = INVALID_SCORE;
-	  work[0][hj].P[k].op = result[hj].cigar.back();	  
+	  work[0][hj].P[k].op = CigarItem(CigarItem::RefGap, 0);	  
 	  work[0][hj].Q[k].score = INVALID_SCORE;
-	  work[0][hj].Q[k].op = result[hj].cigar.back();	  
+	  work[0][hj].Q[k].op = CigarItem(CigarItem::QueryGap, 0);	  
 	}
       }
       work[0][0].D.op = CigarItem(CigarItem::QueryGap, 0);
@@ -254,8 +253,8 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
       int hi = i + 1;
       int hj = j + 1;
 
-      int score = work[hi][hj].D.score;
       ArrayItem *ai = &work[hi][hj].D;
+      int score = ai->score;
 
       for (;;) {
 	rCigar.push_back(ai->op);
@@ -378,7 +377,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 #endif
   
   auto& final = result.back();
-  
+
   if (!final.cigar.empty()) {
     auto& first = final.cigar[0];
     if (first.isRefGap())
@@ -391,7 +390,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
     else if (last.isQueryGap())
       last = CigarItem(CigarItem::RefSkipped, last.length());
   }
-  
+
   return final;
 }
 

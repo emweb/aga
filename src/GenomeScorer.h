@@ -77,13 +77,13 @@ public:
     // paper: considers ref+1 and p.i == 0, but here we implement using refI and p.i != 2
     for (const auto& p : ref.cdsAa(refI)) {
 #ifdef TRACE
-	std::cerr << "open aa ref gap: ";
+      std::cerr << "open aa ref gap: ";
 #endif
       /*
        * Penalize if we are starting a gap at a non-codon boundary.
        * But this should score a gap after refI, hence position 2
        */
-      if (p.i != 2) {
+      if (p.i != 2 && (int)(queryI - p.i - 1) >= 0) {
 	aaResult += aaScorer_.misalignmentCost();
 
 	seq::AminoAcid aaRef = p.aa;
@@ -155,7 +155,7 @@ public:
 	std::cerr << "open aa query gap: ";
 #endif
 
-	if (p.i != 0) {
+	if (p.i != 0 && (int)(queryI - p.i + 1) >= 0) {
 	  aaResult += aaScorer_.misalignmentCost();
 
 	  seq::AminoAcid aaRef = p.aa;

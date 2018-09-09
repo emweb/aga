@@ -156,6 +156,10 @@ Cigar Cigar::createFromAlignment(const seq::NTSequence& ref,
     seq::Nucleotide r = ref[i];
     seq::Nucleotide q = query[i];
 
+    if ((r == seq::Nucleotide::GAP || r == seq::Nucleotide::MISSING) &&
+	(q == seq::Nucleotide::GAP || q == seq::Nucleotide::MISSING))
+      continue;
+    
     if (r == seq::Nucleotide::GAP) {
       if (current.op() != CigarItem::RefGap) {
 	if (current.length() > 0) 
