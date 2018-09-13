@@ -5,6 +5,7 @@
  */
 
 #include "Genome.h"
+#include "GenomeScorer.h"
 #include "CodingSequence.h"
 #include "Codon.h"
 
@@ -565,6 +566,27 @@ Genome readGenome(const std::string& fasta, const std::string& cds,
   }
 
   return result;
+}
+
+Genome unwrapLinear(const Genome& genome, const GenomeScorer& scorer)
+{
+  Genome linearized(genome, Genome::Geometry::Linear);
+  linearized.insert(linearized.end(), genome.begin(), genome.end());
+
+  for (const auto& f : genome.cdsFeatures()) {
+    if (f.wraps(genome.size())) {
+      CdsFeature f2 = f.unwrapLinear(genome.size());
+      linearized.addCdsFeature(f2);
+    } else {
+      linearized.addCdsFeature(f);
+      linearized.addCdsFeature(f.shift(genome.size()));
+    }
+  }
+
+  linearized.preprocess(scorer.ntWeight(),
+			scorer.aaWeight());
+
+  return linearized;
 }
 
 void optimizeMisaligned(CDSAlignment& alignment,

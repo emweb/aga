@@ -191,21 +191,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
   Genome linearized;
   if (ref.geometry() == Genome::Geometry::Circular) {
     std::cerr << "Circular" << std::endl;
-    linearized = Genome(ref, Genome::Geometry::Linear);
-    linearized.insert(linearized.end(), ref.begin(), ref.end());
-
-    for (const auto& f : ref.cdsFeatures()) {
-      if (f.wraps(ref.size())) {
-	CdsFeature f2 = f.unwrapLinear(ref.size());
-	linearized.addCdsFeature(f2);
-      } else {
-	linearized.addCdsFeature(f);
-	linearized.addCdsFeature(f.shift(ref.size()));
-      }
-    }
-
-    linearized.preprocess(aligner.scorer().ntWeight(),
-			  aligner.scorer().aaWeight());
+    linearized = unwrapLinear(ref, aligner.scorer());
   }
   
   for (;;) {

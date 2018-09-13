@@ -13,6 +13,8 @@
 #include "Cigar.h"
 #include "SimpleScorer.h"
 
+class GenomeScorer;
+
 struct CdsPosition {
   seq::AminoAcid aa;
   int i; // 0, 1 or 2 within amino acid (reverse complemented if applicable)
@@ -146,6 +148,8 @@ extern AlignmentStats calcStats(const seq::AASequence& alignedRef,
 
 extern Genome readGenome(const std::string& fasta, const std::string& cds,
 			 std::vector<CdsFeature>& proteins);
+
+extern Genome unwrapLinear(const Genome& genome, const GenomeScorer& scorer);
 
 template <class Scorer, class Reference, class Query>
 double calcConcordance(const Reference& alignedRef,
