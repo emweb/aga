@@ -55,6 +55,9 @@ struct CdsFeature
   void parseLocation(const std::string& location);
 
   bool contains(const CdsFeature& other) const;
+  bool wraps(int length) const;
+  CdsFeature shift(int offset) const;
+  CdsFeature unwrapLinear(int length) const;  
   
   bool complement;
   std::string locationStr;
@@ -66,12 +69,18 @@ struct CdsFeature
 class Genome : public seq::NTSequence
 {
 public:
+  enum class Geometry {
+    Linear, Circular
+  };
+  
   Genome();
-  Genome(const seq::NTSequence& sequence);
+  Genome(const seq::NTSequence& sequence, Geometry geometry);
+
+  void setGeometry(Geometry geometry);
+  Geometry geometry() const { return geometry_; }
 
   bool addCdsFeature(const CdsFeature& feature);
   bool processCdsFeature(CdsFeature& cds) const;
-
   const std::vector<CdsFeature>& cdsFeatures() const { return cdsFeatures_; }
 
   void preprocess(int ntWeight, int aaWeight);
@@ -87,6 +96,7 @@ private:
   std::vector<std::vector<CdsPosition>> cdsAa_;
   std::vector<int> aaWeight_, ntWeight_;
   int scoreFactor_;
+  Geometry geometry_;
 };
 
 struct CodingSequence {

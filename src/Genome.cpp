@@ -170,6 +170,50 @@ bool CdsFeature::contains(const CdsFeature& other) const
   return true;
 }
 
+bool CdsFeature::wraps(int length) const
+{
+  for (unsigned int i = 0; i < location.size() - 1; ++i) {
+    const Region& r = location[i];
+    if (r.end == length) {
+      if (i + 1 < location.size() && location[i + 1].start == 0)
+	return true;
+    }
+  }
+
+  return false;
+}
+
+CdsFeature CdsFeature::shift(int offset) const
+{
+  CdsFeature result(*this);
+
+  for (auto& l : result.location) {
+    l.start += offset;
+    l.end += offset;
+  }
+
+  return result;
+}
+
+CdsFeature CdsFeature::unwrapLinear(int length) const
+{
+  CdsFeature result(*this);
+
+  bool wrap = false;
+
+  for (auto& l : result.location) {
+    if (wrap) {
+      l.start += length;
+      l.end += length;
+    }
+    
+    if (l.end == length)
+      wrap = true;
+  }
+
+  return result;
+}
+
 CodingSequence::CodingSequence()
 { }
 
@@ -181,10 +225,12 @@ CodingSequence::CodingSequence(const seq::NTSequence& aNtSequence)
 }
 
 Genome::Genome()
+  : geometry_(Geometry::Linear)
 { }
 
-Genome::Genome(const seq::NTSequence& sequence)
-  : seq::NTSequence(sequence)
+Genome::Genome(const seq::NTSequence& sequence, Geometry geometry)
+  : seq::NTSequence(sequence),
+    geometry_(geometry)
 { }
 
 bool Genome::processCdsFeature(CdsFeature& cds) const
@@ -311,8 +357,13 @@ void Genome::preprocess(int ntWeight, int aaWeight)
   */
 }
 
+void Genome::setGeometry(Geometry geometry)
+{
+  geometry_ = geometry;
+}
+
 std::vector<CDSAlignment>
-getCDSAlignments(const Cigar& alignment, const seq::NTSequence& ref,
+getCDSAlignments(const Cigar& cigar, const seq::NTSequence& ref,
 		 const seq::NTSequence& query,
 		 const std::vector<CdsFeature>& cdsFeatures,
 		 bool overlappingOnly)
@@ -320,8 +371,17 @@ getCDSAlignments(const Cigar& alignment, const seq::NTSequence& ref,
   std::vector<CDSAlignment> result;
 
   Range queryRange;
-  queryRange.start = alignment.queryStart();
-  queryRange.end = alignment.queryEnd();
+
+  Cigar alignment = cigar;
+
+  if (alignment.queryWrapped()) {
+    alignment = Cigar::createFromAlignment(ref, query);
+  }
+
+  if (overlappingOnly) {
+    queryRange.start = alignment.queryStart();
+    queryRange.end = alignment.queryEnd();
+  }
 
   for (const auto& f : cdsFeatures) {
     seq::NTSequence cdsRef, cdsQuery;
@@ -476,6 +536,11 @@ Genome readGenome(const std::string& fasta, const std::string& cds,
   int unnamed = 0;
   while (std::getline(annotationsFile, line))
   {
+    if (line == "circular") {
+      result.setGeometry(Genome::Geometry::Circular);
+      continue;
+    }
+
     std::stringstream lineStream(line);
 
     std::string refName;

@@ -237,6 +237,17 @@ int Cigar::queryEndExcess() const
   return 0;
 }
 
+bool Cigar::queryWrapped() const
+{
+  for (unsigned i = 0; i < size(); ++i) {
+    const auto& item = (*this)[i];
+    if (item.op() == CigarItem::QueryWrap)
+      return true;
+  }
+
+  return false;
+}
+
 int Cigar::queryStart() const
 {
   int i = 0;
@@ -545,7 +556,7 @@ void Cigar::removeLastRefSkipped()
   }
 }
 
-void Cigar::wrapAround(int refPos)
+void Cigar::wrapAround(int refLength)
 {
   unsigned refI = 0;
 
@@ -554,10 +565,10 @@ void Cigar::wrapAround(int refPos)
 
     switch (item.op()) {
     case CigarItem::Match:
-      if (refPos < refI + item.length()) {
+      if (refLength < refI + item.length()) {
 	// split match in two parts
 	bool isLast = i == size() - 1;
-	int p1 = refPos - refI;
+	int p1 = refLength - refI;
 	int p2 = item.length() - p1;
 	erase(begin() + i);
 	if (p1 != 0) {
@@ -580,10 +591,10 @@ void Cigar::wrapAround(int refPos)
       break;
     case CigarItem::QueryGap:
     case CigarItem::RefSkipped:
-      if (refPos < refI + item.length()) {
+      if (refLength < refI + item.length()) {
 	// split query gap/missing in two parts
 	bool isLast = i == size() - 1;
-	int p1 = refPos - refI;
+	int p1 = refLength - refI;
 	int p2 = item.length() - p1;
 	CigarItem::Op op = item.op();
 	erase(begin() + i);

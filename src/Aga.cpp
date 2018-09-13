@@ -188,6 +188,26 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 {
   std::ifstream q(queriesFile);
 
+  Genome linearized;
+  if (ref.geometry() == Genome::Geometry::Circular) {
+    std::cerr << "Circular" << std::endl;
+    linearized = Genome(ref, Genome::Geometry::Linear);
+    linearized.insert(linearized.end(), ref.begin(), ref.end());
+
+    for (const auto& f : ref.cdsFeatures()) {
+      if (f.wraps(ref.size())) {
+	CdsFeature f2 = f.unwrapLinear(ref.size());
+	linearized.addCdsFeature(f2);
+      } else {
+	linearized.addCdsFeature(f);
+	linearized.addCdsFeature(f.shift(ref.size()));
+      }
+    }
+
+    linearized.preprocess(aligner.scorer().ntWeight(),
+			  aligner.scorer().aaWeight());
+  }
+  
   for (;;) {
     seq::NTSequence query;
     q >> query;
@@ -213,17 +233,26 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
       typename Aligner::Solution solution;
 
       if (c.sequence.size() > 0) {
+	bool circular = !linearized.empty();
+      
 	c.sequence.sampleAmbiguities();
-	solution = aligner.align(ref, NTSequence6AA(c.sequence), 0);
+	solution = aligner.align(circular ? linearized : ref,
+				 NTSequence6AA(c.sequence), 0);
 
 	if (!strictCodonBoundaries) {
-	  seq::NTSequence seq1 = ref;
+	  seq::NTSequence seq1 = circular ? linearized : ref;
 	  seq::NTSequence seq2 = c.sequence;
 	  solution.cigar.align(seq1, seq2);
 
 	  realignGaps(aligner.scorer().nucleotideScorer(), seq1, seq2);
 	  solution.cigar = Cigar::createFromAlignment(seq1, seq2);
 	}
+
+	if (circular) {
+	  std::cout << "Linearized: " << solution.cigar << std::endl;
+	  solution.cigar.wrapAround(ref.size());
+	}
+
       } else {
 	solution.score = 0;
 	solution.cigar.push_back(CigarItem(CigarItem::RefSkipped, ref.size()));
@@ -243,7 +272,8 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
     solution.cigar = p.first;
     solution.score = p.second;
 
-    std::cerr << "Aligned: " << solution.cigar << " " << solution.score << std::endl;
+    std::cerr << "Aligned: " << solution.cigar << " "
+	      << solution.score << std::endl;
 
     solution.cigar.removeUnalignedQuery(query);
     saveSolution(solution.cigar, ref, query, ntAlignmentFile);
@@ -502,7 +532,7 @@ int main(int argc, char **argv)
       std::cerr << "Command-line help:" << std::endl << std::endl
 		<< parser;
     } else if (e.what() == version.Name()) {
-      std::cout << "AGA version 0.91" << std::endl;
+      std::cout << "AGA version 0.92" << std::endl;
     }
     return 0;
   } catch (args::ParseError e) {

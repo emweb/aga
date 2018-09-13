@@ -233,10 +233,13 @@ std::string makeValidId(const std::string& input)
 
 Genome getGenome(const GenbankRecord& record)
 {
-  Genome result(record.sequence);
+  Genome::Geometry geometry = Genome::Geometry::Linear;
+  if (record.locus.find("circular") != std::string::npos)
+    geometry = Genome::Geometry::Circular;
+  
+  Genome result(record.sequence, geometry);
   result.setName(removeNewLines(record.version));
   result.setDescription(removeNewLines(record.definition));
-
   result.sampleAmbiguities();
 
   for (const auto& f : record.features) {
