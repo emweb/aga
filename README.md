@@ -35,9 +35,9 @@ example, go to [https://www.ncbi.nlm.nih.gov/nuccore/NC_001802.1](https://www.nc
 The query sequence is provided in a FASTA file.
 
 ```
-  aga {OPTIONS} [REFERENCE.GB] [QUERY.FASTA] [ALIGNMENT.FASTA]
+  build/src/aga {OPTIONS} [REFERENCE.GB] [QUERY.FASTA] [ALIGNMENT.FASTA]
 
-    This is AGA, a Genomic Aligner, (c) Emweb bvba
+    This is AGA, an Annotated Genome Aligner, (c) Emweb bvba
     See http://github.com/emweb/aga/LICENSE.txt for terms of use.
 
   OPTIONS:
@@ -71,6 +71,8 @@ The query sequence is provided in a FASTA file.
         --aa-frameshift=[COST]            Frameshift penalty (default=-100)
         --aa-misalign=[COST]              Codon misalignment penalty
                                           (default=-20)
+      General alignment options
+        --strict-codon-boundaries         Do not optimize at codon boundaries
       Amino acid alignments output
         --cds-aa-alignments=[ALIGNMENT.FASTA]
                                           Amino acid alignments output file of
