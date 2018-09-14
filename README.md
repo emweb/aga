@@ -1,4 +1,4 @@
-# Advanced Genomic Aligner (AGA)
+# Annotated Genome Aligner (AGA)
 
 AGA computes the optimal pairwise alignment of a nucleic acid sequence
 against a reference genome, taking into account all CDS annotations of
