@@ -25,6 +25,29 @@ struct CdsPosition {
 struct Range
 {
   int start, end; // C conventions, start < end
+
+  Range()
+    : start(0), end(0)
+  { }
+  
+  Range(int aStart, int anEnd)
+    : start(aStart), end(anEnd)
+  { }
+  
+  bool operator== (const Range& other) {
+    return start == other.start && end == other.end;
+  }
+  
+  bool operator< (const Range& other) const {
+    if (start < other.start)
+      return true;
+    else {
+      if (start == other.start)
+	return end < other.end;
+      else
+	return false;
+    }
+  }
 };
 
 inline bool overlaps(const Range& r1, const Range& r2)
@@ -92,6 +115,7 @@ public:
   int scoreFactor() const { return scoreFactor_; }
   int ntWeight(int pos) const { return ntWeight_[pos]; }
   int aaWeight(int pos) const { return aaWeight_[pos]; }
+  std::vector<seq::NTSequence> nonCodingSequences(int minLength) const;
 
 private:
   std::vector<CdsFeature> cdsFeatures_;

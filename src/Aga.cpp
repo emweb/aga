@@ -568,7 +568,7 @@ int main(int argc, char **argv)
 	      << std::endl;
   }
   std::cout << std::endl;
-
+  
   const int **ntMat = ntScoreMatrix(args::get(ntMatchFlag),
 				    args::get(ntMismMatchFlag));
   SimpleScorer<seq::NTSequence> ntScorer(ntMat,

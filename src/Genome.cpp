@@ -363,6 +363,77 @@ void Genome::setGeometry(Geometry geometry)
   geometry_ = geometry;
 }
 
+void merge(std::set<Range>& ranges, const Range& r)
+{
+  auto it = ranges.insert(r).first;
+
+  if (it != ranges.begin()) {
+    auto b = it;
+    --b;
+    if (it->start <= b->end) {
+      Range newb = *b;
+      newb.end = std::max(b->end, it->end);
+      ranges.erase(b);
+      ranges.erase(it);
+      it = ranges.insert(newb).first;
+    }
+  }
+
+  for (;;) {
+    auto a = it;
+    ++a;
+    if (a != ranges.end()) {
+      if (it->end >= a->start) {
+	Range newr = *it;
+	newr.end = std::max(it->end, a->end);
+	ranges.erase(a);
+	ranges.erase(it);
+	it = ranges.insert(newr).first;
+      } else
+	break;
+    } else
+      break;
+  }
+}
+
+std::set<Range> invert(const std::set<Range>& ranges, int length)
+{
+  std::set<Range> result;
+
+  int lastEnd = 0;
+  for (const auto& r : ranges) {
+    if (r.start > lastEnd) {
+      result.insert(Range(lastEnd, r.start));
+    }
+    lastEnd = r.end;
+  }
+
+  if (lastEnd < length)
+    result.insert(Range(lastEnd, length));
+
+  return result;
+}
+
+std::vector<seq::NTSequence> Genome::nonCodingSequences(int minLength) const
+{
+  std::set<Range> cdsRanges;
+  for (const auto& cds : cdsFeatures_)
+    for (const auto& l : cds.location)
+      merge(cdsRanges, l);
+
+  std::set<Range> noncodingRanges = invert(cdsRanges, size());
+
+  std::vector<seq::NTSequence> seqs;
+
+  for (auto& r : noncodingRanges) {
+    if (r.end - r.start > minLength) {
+      seqs.push_back(seq::NTSequence(begin() + r.start, begin() + r.end));
+    }
+  }
+
+  return seqs;
+}
+
 std::vector<CDSAlignment>
 getCDSAlignments(const Cigar& cigar, const seq::NTSequence& ref,
 		 const seq::NTSequence& query,
