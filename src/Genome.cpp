@@ -608,11 +608,6 @@ Genome readGenome(const std::string& fasta, const std::string& cds,
   int unnamed = 0;
   while (std::getline(annotationsFile, line))
   {
-    if (line == "circular") {
-      result.setGeometry(Genome::Geometry::Circular);
-      continue;
-    }
-
     std::stringstream lineStream(line);
 
     std::string refName;
@@ -623,6 +618,11 @@ Genome readGenome(const std::string& fasta, const std::string& cds,
 
     std::string cds;
     std::getline(lineStream, cds, '\t');
+
+    if (cds == "circular") {
+      result.setGeometry(Genome::Geometry::Circular);
+      continue;
+    }
 
     std::string type;
     std::getline(lineStream, type, '\t');
