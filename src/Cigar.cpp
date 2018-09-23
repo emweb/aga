@@ -553,6 +553,9 @@ void Cigar::removeLastRefSkipped()
       erase(begin() + size() - i - 1);
       return;
     }
+
+    if (item.op() != CigarItem::QuerySkipped)
+      return;
   }
 }
 
