@@ -30,7 +30,7 @@ public:
 
   Solution align(const Reference& seq1, const Query& seq2, int minScore = 0);
 
-  const Scorer& scorer() const { return scorer_; }
+  Scorer& scorer() { return scorer_; }
   
 private:
   Scorer scorer_;
@@ -47,6 +47,10 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
     unsigned hj = j + 1;
     result[hj].cigar = result[hj - 1].cigar;
     result[hj].cigar.addRefGap();
+    if (j == 0)
+      result[hj].score += scorer_.scoreOpenRefGap(ref, query, ref.size() - 1, 0);
+    else
+      result[hj].score += scorer_.scoreExtendRefGap(ref, query, ref.size() - 1, 0, j);
   }
 
   result[0].cigar.push_back(CigarItem(CigarItem::QueryGap, 0));
@@ -380,12 +384,12 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 
   if (!final.cigar.empty()) {
     auto& first = final.cigar[0];
-    if (first.isRefGap())
+    if (!scorer_.scoreRefEndGap() && first.isRefGap())
       first = CigarItem(CigarItem::QuerySkipped, first.length());
     else if (first.isQueryGap())
       first = CigarItem(CigarItem::RefSkipped, first.length());
     auto& last = final.cigar[final.cigar.size() - 1];
-    if (last.isRefGap())
+    if (!scorer_.scoreRefEndGap() && last.isRefGap())
       last = CigarItem(CigarItem::QuerySkipped, last.length());
     else if (last.isQueryGap())
       last = CigarItem(CigarItem::RefSkipped, last.length());

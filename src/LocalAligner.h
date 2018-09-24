@@ -31,7 +31,7 @@ public:
 
   Solution align(const Reference& seq1, const Query& seq2, int minScore = 0);
 
-  const Scorer& scorer() const { return scorer_; }
+  Scorer& scorer() { return scorer_; }
 
 private:
   Scorer scorer_;

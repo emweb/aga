@@ -90,9 +90,18 @@ public:
       gapExtensionCost_(gapExtensionCost),
       frameShiftCost_(frameShiftCost),
       misalignmentCost_(misalignmentCost),
-      weightMatrix_(weightMatrix)
+      weightMatrix_(weightMatrix),
+      scoreRefEndGap_(false)
   { }
 
+  void setScoreRefEndGap(bool enabled) {
+    scoreRefEndGap_ = enabled;
+  }
+
+  bool scoreRefEndGap() const {
+    return scoreRefEndGap_;
+  }
+  
   const int **weightMatrix() const {
     return weightMatrix_;
   }
@@ -126,7 +135,7 @@ public:
   int scoreOpenRefGap(const Sequence& ref, const Sequence& query,
 		      unsigned refI, unsigned queryI)
   {
-    if (refI == ref.size() - 1)
+    if (!scoreRefEndGap_ && refI == ref.size() - 1)
       return 0; // no penalty for gaps at the edge
     else
       return gapOpenCost_;
@@ -135,7 +144,7 @@ public:
   int scoreExtendRefGap(const Sequence& ref, const Sequence& query,
 			unsigned refI, unsigned queryI, int k)
   {
-    if (refI == ref.size() - 1)
+    if (!scoreRefEndGap_ && refI == ref.size() - 1)
       return 0; // no penalty for gaps at the edge
     else
       return gapExtensionCost_;
@@ -191,7 +200,7 @@ public:
 	  score += gapOpenCost_;
 	} else
 	  score += gapExtensionCost_;
-	
+
 	refGap = true;
 	refMissing = false;
       } else if (ref[i] == Character::MISSING) {
@@ -397,6 +406,7 @@ private:
   int frameShiftCost_;
   int misalignmentCost_;
   const int **weightMatrix_;
+  bool scoreRefEndGap_;
 };
 
 #endif // SIMPLE_SCORER_H_

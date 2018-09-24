@@ -27,6 +27,15 @@ public:
       aaWeight_(aaWeight)
   { }
 
+  void setScoreRefEndGap(bool enabled) {
+    ntScorer_.setScoreRefEndGap(enabled);
+    aaScorer_.setScoreRefEndGap(enabled);
+  }
+
+  bool scoreRefEndGap() const {
+    return ntScorer_.scoreRefEndGap() || aaScorer_.scoreRefEndGap();
+  }
+  
   const SimpleScorer<seq::NTSequence>& nucleotideScorer() const {
     return ntScorer_;
   }
@@ -68,7 +77,9 @@ public:
 		      unsigned refI, unsigned queryI)
   {
     if (refI == ref.size() - 1)
-      return 0;
+      return
+	ref.ntWeight(refI) * ntScorer_.scoreOpenRefGap(ref, query, refI, queryI) +
+	ref.aaWeight(refI) * aaScorer_.gapOpenCost();
 
     int ntResult = ntScorer_.scoreOpenRefGap(ref, query, refI, queryI);
 
@@ -114,7 +125,9 @@ public:
 			unsigned refI, unsigned queryI, int k)
   {
     if (refI == ref.size() - 1)
-      return 0;
+      return
+	ref.ntWeight(refI) * ntScorer_.scoreExtendRefGap(ref, query, refI, queryI, k) +
+	ref.aaWeight(refI) * aaScorer_.gapExtendCost();
 
     int ntResult = ntScorer_.scoreExtendRefGap(ref, query, refI, queryI, k);
 
