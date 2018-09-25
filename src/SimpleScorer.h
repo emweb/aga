@@ -159,7 +159,8 @@ public:
       return gapExtensionCost_;
   }
 
-  double calcScore(const Sequence& ref, const Sequence& query) const
+  double calcScore(const Sequence& ref, const Sequence& query,
+		   int frameshiftCount) const
   {
     double score = 0;
 
@@ -240,6 +241,8 @@ public:
       }
     }
 
+    score += frameshiftCount * frameShiftCost_;
+
     return score;
   }
   
@@ -261,7 +264,7 @@ public:
   {
     AlignmentStats result;
 
-    result.concordance = calcConcordance(ref, query, *this, penalizeUnaligned);
+    result.concordance = calcConcordance(ref, query, *this, frameshiftCount, penalizeUnaligned);
     
     int queryEnd = 0;
     for (int i = query.size() - 1; i >= 0; --i) {

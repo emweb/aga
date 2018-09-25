@@ -113,7 +113,7 @@ void realignGaps(const SimpleScorer<seq::NTSequence>& nucleotideScorer,
 	  seq::NTSequence query1(query.begin() + (i - gapLength - 3),
 				 query.begin() + (i + 3));
 
-	  variants[0] = nucleotideScorer.calcScore(ref1, query1);
+	  variants[0] = nucleotideScorer.calcScore(ref1, query1, 0);
 
 	  // std::cerr << "0: " << variants[0] << std::endl << ref1 << query1;
 
@@ -121,7 +121,7 @@ void realignGaps(const SimpleScorer<seq::NTSequence>& nucleotideScorer,
 
 	  for (int j = 1; j <= 2; ++j) {
 	    std::swap(s[3 - j], s[3 + gapLength - j]);
-	    variants[j] = nucleotideScorer.calcScore(ref1, query1);
+	    variants[j] = nucleotideScorer.calcScore(ref1, query1, 0);
 	    // std::cerr << j << ": " << variants[j] << std::endl << ref1 << query1;
 	  }
 
@@ -131,7 +131,7 @@ void realignGaps(const SimpleScorer<seq::NTSequence>& nucleotideScorer,
 
 	  for (int j = 0; j <= 1; ++j) {
 	    std::swap(s[3 + j], s[3 + gapLength + j]);
-	    variants[3 + j] = nucleotideScorer.calcScore(ref1, query1);
+	    variants[3 + j] = nucleotideScorer.calcScore(ref1, query1, 0);
 	    // std::cerr << 3 + j << ": " << variants[3 + j] << std::endl << ref1 << query1;
 	  }
 	}
@@ -315,7 +315,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 	solution.cigar.align(alignedRef, alignedQuery);
 
 	concordance = calcConcordance(alignedRef, alignedQuery,
-				      aligner.scorer(), true);
+				      aligner.scorer(), 0, true);
       }
       
       std::cout << std::endl
