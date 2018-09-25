@@ -530,7 +530,7 @@ Cigar Cigar::fromString(const std::string& s)
     case 'O': op = CigarItem::QuerySkipped; break;
     case 'W': op = CigarItem::QueryWrap; break;
     default:
-      throw std::runtime_error("Illegal CIGAR format, unknown op: " + sop);
+      throw std::runtime_error(std::string("Illegal CIGAR format, unknown op: ") + sop);
     }
 
     int len = 0;
