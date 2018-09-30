@@ -179,11 +179,12 @@ template <class Scorer, class Reference, class Query>
 double calcConcordance(const Reference& alignedRef,
 		       const Query& alignedQuery,
 		       const Scorer& scorer,
+		       int frameshifts,
 		       bool penalizeUnaligned)
 {
   typedef typename Reference::value_type Character;
   
-  double score = scorer.calcScore(alignedRef, alignedQuery);
+  double score = scorer.calcScore(alignedRef, alignedQuery, frameshifts);
 
   Reference r2 = alignedRef;
   Query q2 = alignedQuery;
@@ -206,7 +207,7 @@ double calcConcordance(const Reference& alignedRef,
     }
   }
 
-  double perfectScore = scorer.calcScore(r2, q2);
+  double perfectScore = scorer.calcScore(r2, q2, 0);
 
   if (perfectScore > 0)
     return ((double)aligned / (aligned + unaligned))

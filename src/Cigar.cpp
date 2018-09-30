@@ -514,8 +514,11 @@ Cigar Cigar::fromString(const std::string& s)
     if (isspace(s[i]))
       continue;
     std::string lens;
-    while (isdigit(s[i]))
+    while (i < s.length() && isdigit(s[i]))
       lens += s[i++];
+
+    if (i == s.length())
+      throw std::runtime_error("Illegal CIGAR format");
 
     CigarItem::Op op = CigarItem::Match;
     char sop = s[i];
@@ -527,7 +530,7 @@ Cigar Cigar::fromString(const std::string& s)
     case 'O': op = CigarItem::QuerySkipped; break;
     case 'W': op = CigarItem::QueryWrap; break;
     default:
-      throw std::runtime_error("Illegal CIGAR format, unknown op: " + sop);
+      throw std::runtime_error(std::string("Illegal CIGAR format, unknown op: ") + sop);
     }
 
     int len = 0;
@@ -623,6 +626,36 @@ void Cigar::wrapAround(int refLength)
       assert(false);
     }
   }
+}
+
+std::vector<bool> Cigar::refCovered(int refLength) const
+{
+  std::vector<bool> result(refLength, false);
+
+  unsigned refI = 0;
+
+  for (unsigned i = 0; i < size(); ++i) {
+    auto& item = (*this)[i];
+
+    switch (item.op()) {
+    case CigarItem::Match:
+    case CigarItem::QueryGap:
+      for (unsigned j = 0; j < item.length(); ++j)
+	result[refI + j] = true;
+      refI += item.length();
+      break;
+    case CigarItem::RefGap:
+    case CigarItem::QuerySkipped:
+      break;
+    case CigarItem::RefSkipped:
+      refI += item.length();
+      break;
+    case CigarItem::QueryWrap:
+      refI = 0;
+    }
+  }
+
+  return result;
 }
 
 std::ostream& operator<<(std::ostream& o, const CigarItem& c)

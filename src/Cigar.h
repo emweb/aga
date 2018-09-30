@@ -140,6 +140,8 @@ struct Cigar : public std::vector<CigarItem>
     std::swap((std::vector<CigarItem>&)a, (std::vector<CigarItem>&)b);
   }
 
+  std::vector<bool> refCovered(int refLength) const;
+  
 private:
   void removeLastRefSkipped();
 };
