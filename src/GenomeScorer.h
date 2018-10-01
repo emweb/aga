@@ -27,6 +27,15 @@ public:
       aaWeight_(aaWeight)
   { }
 
+  void setScoreRefStartGap(bool enabled) {
+    ntScorer_.setScoreRefStartGap(enabled);
+    aaScorer_.setScoreRefStartGap(enabled);
+  }
+
+  bool scoreRefStartGap() const {
+    return ntScorer_.scoreRefStartGap() || aaScorer_.scoreRefStartGap();
+  }
+
   void setScoreRefEndGap(bool enabled) {
     ntScorer_.setScoreRefEndGap(enabled);
     aaScorer_.setScoreRefEndGap(enabled);
@@ -35,7 +44,25 @@ public:
   bool scoreRefEndGap() const {
     return ntScorer_.scoreRefEndGap() || aaScorer_.scoreRefEndGap();
   }
-  
+
+  void setScoreQueryStartGap(bool enabled) {
+    ntScorer_.setScoreQueryStartGap(enabled);
+    aaScorer_.setScoreQueryStartGap(enabled);
+  }
+
+  bool scoreQueryStartGap() const {
+    return ntScorer_.scoreQueryStartGap() || aaScorer_.scoreQueryStartGap();
+  }
+
+  void setScoreQueryEndGap(bool enabled) {
+    ntScorer_.setScoreQueryEndGap(enabled);
+    aaScorer_.setScoreQueryEndGap(enabled);
+  }
+
+  bool scoreQueryEndGap() const {
+    return ntScorer_.scoreQueryEndGap() || aaScorer_.scoreQueryEndGap();
+  }
+
   const SimpleScorer<seq::NTSequence>& nucleotideScorer() const {
     return ntScorer_;
   }

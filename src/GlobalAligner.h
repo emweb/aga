@@ -48,9 +48,9 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
     result[hj].cigar = result[hj - 1].cigar;
     result[hj].cigar.addRefGap();
     if (j == 0)
-      result[hj].score += scorer_.scoreOpenRefGap(ref, query, ref.size() - 1, 0);
+      result[hj].score += scorer_.scoreOpenRefGap(ref, query, -1, 0);
     else
-      result[hj].score += scorer_.scoreExtendRefGap(ref, query, ref.size() - 1, 0, j);
+      result[hj].score += scorer_.scoreExtendRefGap(ref, query, -1, j, j);
   }
 
   result[0].cigar.push_back(CigarItem(CigarItem::QueryGap, 0));
@@ -87,7 +87,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 
     if (stripeI == 0) {
       for (unsigned hj = 0; hj < query.size() + 1; ++hj) {
-	work[0][hj].D.score = 0;
+	work[0][hj].D.score = result[hj].score;
 	work[0][hj].D.op = result[hj].cigar.back();
 	work[0][hj].M = work[0][hj].D;
 
@@ -99,6 +99,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 	}
       }
       work[0][0].D.op = CigarItem(CigarItem::QueryGap, 0);
+      work[0][0].D.score = scorer_.scoreOpenQueryGap(ref, query, -1, -1);
       work[0][0].M = work[0][0].D;
     } else {
       work[0] = work[N];
@@ -109,6 +110,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 
       work[hi][0] = work[hi - 1][0];
       work[hi][0].D.op.add();
+      work[hi][0].D.score += scorer_.scoreExtendQueryGap(ref, query, i, -1, i);
       work[hi][0].M = work[hi][0].D;
 
       for (unsigned k = 0; k < SideN; ++k) {
@@ -384,14 +386,14 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 
   if (!final.cigar.empty()) {
     auto& first = final.cigar[0];
-    if (!scorer_.scoreRefEndGap() && first.isRefGap())
+    if (!scorer_.scoreRefStartGap() && first.isRefGap())
       first = CigarItem(CigarItem::QuerySkipped, first.length());
-    else if (first.isQueryGap())
+    else if (!scorer_.scoreQueryStartGap() && first.isQueryGap())
       first = CigarItem(CigarItem::RefSkipped, first.length());
     auto& last = final.cigar[final.cigar.size() - 1];
     if (!scorer_.scoreRefEndGap() && last.isRefGap())
       last = CigarItem(CigarItem::QuerySkipped, last.length());
-    else if (last.isQueryGap())
+    else if (!scorer_.scoreQueryEndGap() && last.isQueryGap())
       last = CigarItem(CigarItem::RefSkipped, last.length());
   }
 

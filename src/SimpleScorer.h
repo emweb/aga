@@ -91,15 +91,42 @@ public:
       frameShiftCost_(frameShiftCost),
       misalignmentCost_(misalignmentCost),
       weightMatrix_(weightMatrix),
-      scoreRefEndGap_(false)
+      scoreRefStartGap_(false),
+      scoreRefEndGap_(false),
+      scoreQueryStartGap_(false),
+      scoreQueryEndGap_(false)
   { }
 
+  void setScoreRefStartGap(bool enabled) {
+    scoreRefStartGap_ = enabled;
+  }
+
+  bool scoreRefStartGap() const {
+    return scoreRefStartGap_;
+  }
+  
   void setScoreRefEndGap(bool enabled) {
     scoreRefEndGap_ = enabled;
   }
 
   bool scoreRefEndGap() const {
     return scoreRefEndGap_;
+  }
+  
+  void setScoreQueryStartGap(bool enabled) {
+    scoreQueryStartGap_ = enabled;
+  }
+
+  bool scoreQueryStartGap() const {
+    return scoreQueryStartGap_;
+  }
+  
+  void setScoreQueryEndGap(bool enabled) {
+    scoreQueryEndGap_ = enabled;
+  }
+
+  bool scoreQueryEndGap() const {
+    return scoreQueryEndGap_;
   }
   
   const int **weightMatrix() const {
@@ -133,37 +160,45 @@ public:
   }
 
   int scoreOpenRefGap(const Sequence& ref, const Sequence& query,
-		      unsigned refI, unsigned queryI)
+		      int refI, int queryI)
   {
     if (!scoreRefEndGap_ && refI == ref.size() - 1)
-      return 0; // no penalty for gaps at the edge
+      return 0;
+    else if (!scoreRefStartGap_ && refI == -1)
+      return 0;
     else
       return gapOpenCost_;
   }
 
   int scoreExtendRefGap(const Sequence& ref, const Sequence& query,
-			unsigned refI, unsigned queryI, int k)
+			int refI, int queryI, int k)
   {
     if (!scoreRefEndGap_ && refI == ref.size() - 1)
-      return 0; // no penalty for gaps at the edge
+      return 0;
+    else if (!scoreRefStartGap_ && refI == -1)
+      return 0;
     else
       return gapExtensionCost_;
   }
 
   int scoreOpenQueryGap(const Sequence& ref, const Sequence& query,
-			unsigned refI, unsigned queryI)
+			int refI, int queryI)
   {
-    if (queryI == query.size() - 1)
-      return 0; // no penalty for gaps at the edge
+    if (!scoreQueryEndGap_ && queryI == query.size() - 1)
+      return 0;
+    else if (!scoreQueryStartGap_ && queryI == -1)
+      return 0;
     else
       return gapOpenCost_;
   }
 
   int scoreExtendQueryGap(const Sequence& ref, const Sequence& query,
-			  unsigned refI, unsigned queryI, int k)
+			  int refI, int queryI, int k)
   {
-    if (queryI == query.size() - 1)
-      return 0; // no penalty for gaps at the edge
+    if (!scoreQueryEndGap_ && queryI == query.size() - 1)
+      return 0;
+    else if (!scoreQueryStartGap_ && queryI == -1)
+      return 0;
     else
       return gapExtensionCost_;
   }
@@ -409,7 +444,10 @@ private:
   int frameShiftCost_;
   int misalignmentCost_;
   const int **weightMatrix_;
+  bool scoreRefStartGap_;
   bool scoreRefEndGap_;
+  bool scoreQueryStartGap_;
+  bool scoreQueryEndGap_;
 };
 
 #endif // SIMPLE_SCORER_H_
