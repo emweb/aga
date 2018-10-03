@@ -101,12 +101,16 @@ public:
   }
 
   int scoreOpenRefGap(const Genome& ref, const NTSequence6AA& query,
-		      unsigned refI, unsigned queryI)
+		      int refI, int queryI)
   {
     if (refI == ref.size() - 1)
       return
 	ref.ntWeight(refI) * ntScorer_.scoreOpenRefGap(ref, query, refI, queryI) +
 	ref.aaWeight(refI) * aaScorer_.gapOpenCost();
+    else if (refI == -1)
+      return
+	ref.ntWeight(0) * ntScorer_.scoreOpenRefGap(ref, query, refI, queryI) +
+	ref.aaWeight(0) * aaScorer_.gapOpenCost();      
 
     int ntResult = ntScorer_.scoreOpenRefGap(ref, query, refI, queryI);
 
@@ -149,12 +153,16 @@ public:
 
   /* k : old gap length mod 3 */
   int scoreExtendRefGap(const Genome& ref, const NTSequence6AA& query,
-			unsigned refI, unsigned queryI, int k)
+			int refI, int queryI, int k)
   {
     if (refI == ref.size() - 1)
       return
 	ref.ntWeight(refI) * ntScorer_.scoreExtendRefGap(ref, query, refI, queryI, k) +
 	ref.aaWeight(refI) * aaScorer_.gapExtendCost();
+    else if (refI == -1)
+      return
+	ref.ntWeight(0) * ntScorer_.scoreExtendRefGap(ref, query, refI, queryI, k) +
+	ref.aaWeight(0) * aaScorer_.gapExtendCost();      
 
     int ntResult = ntScorer_.scoreExtendRefGap(ref, query, refI, queryI, k);
 
@@ -177,10 +185,12 @@ public:
   }
 
   int scoreOpenQueryGap(const Genome& ref, const NTSequence6AA& query,
-			unsigned refI, unsigned queryI)
+			int refI, int queryI)
   {
-    if (queryI == query.size() - 1)
-      return 0;
+    if (queryI == query.size() - 1 || queryI == -1)
+      return
+	ref.ntWeight(refI) * ntScorer_.scoreOpenQueryGap(ref, query, refI, queryI) +
+	ref.aaWeight(refI) * aaScorer_.gapOpenCost();
 
     int ntResult = ntScorer_.scoreOpenQueryGap(ref, query, refI, queryI);
 
@@ -233,10 +243,12 @@ public:
   }
   
   int scoreExtendQueryGap(const Genome& ref, const NTSequence6AA& query,
-			  unsigned refI, unsigned queryI, int k)
+			  int refI, int queryI, int k)
   {
-    if (queryI == query.size() - 1)
-      return 0;
+    if (queryI == query.size() - 1 || queryI == -1)
+      return
+	ref.ntWeight(refI) * ntScorer_.scoreExtendQueryGap(ref, query, refI, queryI, k) +
+	ref.aaWeight(refI) * aaScorer_.gapExtendCost();
 
     int ntResult = ntScorer_.scoreExtendQueryGap(ref, query, refI, queryI, k);
 
