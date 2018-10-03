@@ -194,6 +194,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
   if (circular) {
     std::cerr << "Circular" << std::endl;
     linearized = unwrapLinear(ref, aligner.scorer());
+    aligner.scorer().setScoreRefStartGap(true);
     aligner.scorer().setScoreRefEndGap(true);
   }
   
@@ -262,8 +263,10 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
     std::cerr << "Aligned: " << solution.cigar << " "
 	      << solution.score << std::endl;
 
-    if (circular)
+    if (circular) {
       aligner.scorer().setScoreRefEndGap(false);
+      aligner.scorer().setScoreRefStartGap(false);
+    }
     
     solution.cigar.removeUnalignedQuery(query);
     saveSolution(solution.cigar, ref, query, ntAlignmentFile);

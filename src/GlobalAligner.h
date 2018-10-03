@@ -113,10 +113,8 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
       work[hi][0].D.score += scorer_.scoreExtendQueryGap(ref, query, i, -1, i);
       work[hi][0].M = work[hi][0].D;
 
-      for (unsigned k = 0; k < SideN; ++k) {
-	work[hi][0].P[k].op.add();
+      for (unsigned k = 0; k < SideN; ++k)
 	work[hi][0].Q[k].op.add();
-      }
 
       for (unsigned j = 0; j < query.size(); ++j) {
 	unsigned hj = j + 1;

@@ -105,12 +105,10 @@ public:
   {
     if (refI == ref.size() - 1)
       return
-	ref.ntWeight(refI) * ntScorer_.scoreOpenRefGap(ref, query, refI, queryI) +
-	ref.aaWeight(refI) * aaScorer_.gapOpenCost();
+	ref.ntWeight(refI) * ntScorer_.scoreOpenRefGap(ref, query, refI, queryI);
     else if (refI == -1)
       return
-	ref.ntWeight(0) * ntScorer_.scoreOpenRefGap(ref, query, refI, queryI) +
-	ref.aaWeight(0) * aaScorer_.gapOpenCost();      
+	ref.ntWeight(0) * ntScorer_.scoreOpenRefGap(ref, query, refI, queryI);      
 
     int ntResult = ntScorer_.scoreOpenRefGap(ref, query, refI, queryI);
 
@@ -157,12 +155,10 @@ public:
   {
     if (refI == ref.size() - 1)
       return
-	ref.ntWeight(refI) * ntScorer_.scoreExtendRefGap(ref, query, refI, queryI, k) +
-	ref.aaWeight(refI) * aaScorer_.gapExtendCost();
+	ref.ntWeight(refI) * ntScorer_.scoreExtendRefGap(ref, query, refI, queryI, k);
     else if (refI == -1)
       return
-	ref.ntWeight(0) * ntScorer_.scoreExtendRefGap(ref, query, refI, queryI, k) +
-	ref.aaWeight(0) * aaScorer_.gapExtendCost();      
+	ref.ntWeight(0) * ntScorer_.scoreExtendRefGap(ref, query, refI, queryI, k);      
 
     int ntResult = ntScorer_.scoreExtendRefGap(ref, query, refI, queryI, k);
 
@@ -188,9 +184,7 @@ public:
 			int refI, int queryI)
   {
     if (queryI == query.size() - 1 || queryI == -1)
-      return
-	ref.ntWeight(refI) * ntScorer_.scoreOpenQueryGap(ref, query, refI, queryI) +
-	ref.aaWeight(refI) * aaScorer_.gapOpenCost();
+      return ref.ntWeight(refI) * ntScorer_.scoreOpenQueryGap(ref, query, refI, queryI);
 
     int ntResult = ntScorer_.scoreOpenQueryGap(ref, query, refI, queryI);
 
@@ -246,9 +240,7 @@ public:
 			  int refI, int queryI, int k)
   {
     if (queryI == query.size() - 1 || queryI == -1)
-      return
-	ref.ntWeight(refI) * ntScorer_.scoreExtendQueryGap(ref, query, refI, queryI, k) +
-	ref.aaWeight(refI) * aaScorer_.gapExtendCost();
+      return ref.ntWeight(refI) * ntScorer_.scoreExtendQueryGap(ref, query, refI, queryI, k);
 
     int ntResult = ntScorer_.scoreExtendQueryGap(ref, query, refI, queryI, k);
 
