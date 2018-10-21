@@ -52,18 +52,39 @@ LocalAlignment(const Cigar& aCigar, int aScore, int queryStart, int queryEnd,
 struct LocalAlignments {
   std::set<LocalAlignment> localAlignments;
 
-  bool add(const LocalAlignment& alignment) {
+  bool add(LocalAlignment& alignment) {
     auto it = localAlignments.insert(alignment).first;
+
     /* Prevent cross ordering of local alignments since we cannot represent that properly */
     if (it != localAlignments.begin()) {
       auto b = it;
       --b;
       if (b->queryEnd > alignment.queryStart) {
-	std::cerr << "Skipping because of cross align: ";
+	std::cerr << "Skipping because of query cross align ";
 	alignment.print(std::cerr);
+	std::cerr << " with ";
+	b->print(std::cerr);
 	std::cerr << std::endl;
 	localAlignments.erase(it);
 	return false;
+      }
+
+      if (b->refEnd > alignment.refStart) {
+	int overlap = b->refEnd - alignment.refStart;
+	std::cerr << "Trimming because of ref overlap " << overlap << " ";
+	alignment.print(std::cerr);
+	std::cerr << " with ";
+	b->print(std::cerr);
+	std::cerr << std::endl;
+	localAlignments.erase(it);
+
+	// not really correct... ref vs alignment
+
+	alignment.cigar.trimQueryStart(overlap);
+	alignment.queryStart += overlap;
+	alignment.refStart += overlap;
+
+	return add(alignment);
       }
     }
     {
@@ -71,11 +92,27 @@ struct LocalAlignments {
       ++a;
       if (a != localAlignments.end()) {
 	if (alignment.queryEnd > a->queryStart) {
-	  std::cerr << "Skipping because of cross align: ";
+	  std::cerr << "Skipping because of query cross align ";
 	  alignment.print(std::cerr);
+	  std::cerr << " with ";
+	  a->print(std::cerr);
 	  std::cerr << std::endl;
 	  localAlignments.erase(it);
 	  return false;
+	}
+	if (alignment.refEnd > a->refStart) {
+	  int overlap = alignment.refEnd - a->refStart;
+	  std::cerr << "Trimming because of ref overlap " << overlap << " ";
+	  alignment.print(std::cerr);
+	  std::cerr << " with ";
+	  a->print(std::cerr);
+	  std::cerr << std::endl;
+	  localAlignments.erase(it);
+
+	  alignment.cigar.trimQueryEnd(overlap);
+	  alignment.queryEnd -= overlap;
+	  alignment.refEnd -= overlap;
+	  return add(alignment);
 	}
       }
     }
