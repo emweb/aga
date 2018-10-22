@@ -23,7 +23,7 @@ std::vector<Contig> splitContigs(const seq::NTSequence& s)
 {
   // if there are long stretches of Ns : then we break the sequence and treat contigs
   // individually
-  const int STRETCH_CUTOFF = 5;
+  const int STRETCH_CUTOFF = 10;
 
   std::vector<Contig> result;
 
