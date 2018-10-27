@@ -10,8 +10,7 @@ namespace seq {
 
 AminoAcid Codon::translate(const NTSequence::const_iterator triplet)
 {
-  //TODO why not static???
-  const AminoAcid codonTable[4][4][4] = {
+  static const AminoAcid codonTable[4][4][4] = {
   { { AminoAcid::K /* AAA */,
       AminoAcid::N /* AAC */,
       AminoAcid::K /* AAG */,
@@ -107,9 +106,9 @@ AminoAcid Codon::translate(const NTSequence::const_iterator triplet)
       && (*(triplet + 2) == Nucleotide::MISSING))
     return AminoAcid::MISSING;
 
-  if (triplet->isAmbiguity()
-      || (triplet + 1)->isAmbiguity()
-      || (triplet + 2)->isAmbiguity())
+  if (!triplet->isSimple()
+      || !(triplet + 1)->isSimple()
+      || !(triplet + 2)->isSimple())
     return AminoAcid::X;
 
   return
@@ -123,13 +122,19 @@ Codon::translateAll(const NTSequence::const_iterator triplet)
 {
   std::set<AminoAcid> result;
 
-  NTSequence s(triplet, triplet + 3);
+  if (!triplet->isAmbiguity() &&
+      !(triplet + 1)->isAmbiguity() &&
+      !(triplet + 2)->isAmbiguity()) {
+    result.insert(translate(triplet));
+  } else {  
+    NTSequence s(triplet, triplet + 3);
 
-  std::vector<NTSequence> possibilities;
-  s.nonAmbiguousSequences(possibilities);
+    std::vector<NTSequence> possibilities;
+    s.nonAmbiguousSequences(possibilities);
 
-  for (unsigned i = 0; i < possibilities.size(); ++i)
-    result.insert(translate(possibilities[i].begin()));
+    for (unsigned i = 0; i < possibilities.size(); ++i)
+      result.insert(translate(possibilities[i].begin()));
+  }
 
   return result;
 }

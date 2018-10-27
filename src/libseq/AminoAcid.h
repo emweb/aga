@@ -139,6 +139,13 @@ public:
    */
   bool isAmbiguity() const { return false; }
 
+  /**
+   * Is the amino acid simple
+   *
+   * For consistency with seq::Nucleotide interface, always returns true.
+   */
+  bool isSimple() const { return true; }
+
   bool isStopCodon() const { return rep_ == AA_STP; }
   
   /**

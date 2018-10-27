@@ -280,7 +280,7 @@ public:
       }
 
       if (!queryGap && !queryMissing && !refGap && !refMissing) {
-	if (!query[i].isAmbiguity())
+	if (query[i].isSimple())
 	  score += weightMatrix_[ref[i].intRep()][query[i].intRep()];
       }
     }
@@ -400,7 +400,7 @@ public:
       if (!queryGap && !queryMissing && !refGap && !refMissing) {
 	++result.matchCount;
 
-	if (!query[i].isAmbiguity())
+	if (query[i].isSimple())
 	  score += weightMatrix_[ref[i].intRep()][query[i].intRep()];
 
 	if (result.begin == -1) {

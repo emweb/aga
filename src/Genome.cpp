@@ -64,7 +64,7 @@ void CdsFeature::parseLocation(const std::string& cds)
   
   complement = startsWith(cds, "complement");
   std::string s = cds;
-  std::regex rgx = std::regex("([0-9]+)(?:..>?([0-9]+))?");
+  static std::regex rgx("([0-9]+)(?:..>?([0-9]+))?");
 
   std::smatch m;
   while (std::regex_search (s,m, rgx)) {

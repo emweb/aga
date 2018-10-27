@@ -137,11 +137,16 @@ public:
   }
 
   /**
-   * Is the nucleotide ambiguous ? Only A,C,G,T are considered non-ambiguous.
+   * Is the nucleotide ambiguous: will nonAmbiguousNucleotides() result in a vector > 1 ?
    *
    * \sa sampleAmbiguity()
    */
-  bool isAmbiguity() const { return rep_ > NT_T; }
+  bool isAmbiguity() const { return rep_ > NT_T && rep_ < NT_GAP; }
+
+  /**
+   * Is the nucleotide simple ? Only A,C,G,T are considered non-ambiguous.
+   */
+  bool isSimple() const { return rep_ <= NT_T; }
 
   bool isStopCodon() const { return false; }
 

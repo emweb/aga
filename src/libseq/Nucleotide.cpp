@@ -140,49 +140,49 @@ Nucleotide Nucleotide::reverseComplement() const
 
 Nucleotide Nucleotide::singleNucleotide(std::set<Nucleotide>& nucleotides)
 {
-	std::set<Nucleotide>::iterator itgap = nucleotides.find(GAP);
-	if(itgap != nucleotides.end())
-		nucleotides.erase(itgap);
+  std::set<Nucleotide>::iterator itgap = nucleotides.find(GAP);
+  if(itgap != nucleotides.end())
+    nucleotides.erase(itgap);
 
-	if (nucleotides.size() == 1)
-		return *nucleotides.begin();
+  if (nucleotides.size() == 1)
+    return *nucleotides.begin();
 	
-	std::set<Nucleotide> all;
-	for(std::set<Nucleotide>::iterator it = nucleotides.begin(); it != nucleotides.end(); ++it) {
-		std::vector<Nucleotide> t;
-		it->nonAmbiguousNucleotides(t);
-		all.insert(t.begin(), t.end());
-	}
-	bool nta = all.find(A) != all.end();
-	bool ntc = all.find(C) != all.end();
-	bool ntg = all.find(G) != all.end();
-	bool ntt = all.find(T) != all.end();
+  std::set<Nucleotide> all;
+  for(std::set<Nucleotide>::iterator it = nucleotides.begin(); it != nucleotides.end(); ++it) {
+    std::vector<Nucleotide> t;
+    it->nonAmbiguousNucleotides(t);
+    all.insert(t.begin(), t.end());
+  }
+  bool nta = all.find(A) != all.end();
+  bool ntc = all.find(C) != all.end();
+  bool ntg = all.find(G) != all.end();
+  bool ntt = all.find(T) != all.end();
 
-	if (nta && ntc && ntg && ntt)
-		return N;
-	if (nta && ntc && ntg)
-		return V;
-	if (nta && ntc && ntt)
-		return H;
-	if (nta && ntg && ntt)
-		return D;
-	if (ntc && ntg && ntt)
-		return B;
- 	if (nta && ntc)
-		return M;
-	if (ntg && ntt)
-		return K;
-	if (nta && ntt)
-		return W;
-	if (ntg && ntc)
-		return S;
-	if (ntc && ntt)
-		return Y;
-	if (nta && ntg)
-		return R;		
+  if (nta && ntc && ntg && ntt)
+    return N;
+  if (nta && ntc && ntg)
+    return V;
+  if (nta && ntc && ntt)
+    return H;
+  if (nta && ntg && ntt)
+    return D;
+  if (ntc && ntg && ntt)
+    return B;
+  if (nta && ntc)
+    return M;
+  if (ntg && ntt)
+    return K;
+  if (nta && ntt)
+    return W;
+  if (ntg && ntc)
+    return S;
+  if (ntc && ntt)
+    return Y;
+  if (nta && ntg)
+    return R;		
 
-	throw std::runtime_error
-	  ("Internal error in Nucleotide::singleNucleotide()");
+  throw std::runtime_error
+    ("Internal error in Nucleotide::singleNucleotide()");
 }
 
 /**
