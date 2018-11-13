@@ -107,6 +107,7 @@ public:
   bool addCdsFeature(const CdsFeature& feature);
   bool processCdsFeature(CdsFeature& cds) const;
   const std::vector<CdsFeature>& cdsFeatures() const { return cdsFeatures_; }
+  void clearCdsFeatures();
 
   void preprocess(int ntWeight, int aaWeight);
 

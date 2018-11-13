@@ -270,6 +270,12 @@ bool Genome::addCdsFeature(const CdsFeature& cds)
     return true;
 }
 
+void Genome::clearCdsFeatures()
+{
+  cdsFeatures_.clear();
+}
+
+
 void Genome::preprocess(int ntWeight, int aaWeight)
 {
   cdsAa_.clear();
