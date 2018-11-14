@@ -68,24 +68,6 @@ struct LocalAlignments {
 	localAlignments.erase(it);
 	return false;
       }
-
-      if (b->refEnd > alignment.refStart) {
-	int overlap = b->refEnd - alignment.refStart;
-	std::cerr << "Trimming because of ref overlap " << overlap << " ";
-	alignment.print(std::cerr);
-	std::cerr << " with ";
-	b->print(std::cerr);
-	std::cerr << std::endl;
-	localAlignments.erase(it);
-
-	// not really correct... ref vs alignment
-
-	alignment.cigar.trimQueryStart(overlap);
-	alignment.queryStart += overlap;
-	alignment.refStart += overlap;
-
-	return add(alignment);
-      }
     }
     {
       auto a = it;
@@ -100,20 +82,6 @@ struct LocalAlignments {
 	  localAlignments.erase(it);
 	  return false;
 	}
-	if (alignment.refEnd > a->refStart) {
-	  int overlap = alignment.refEnd - a->refStart;
-	  std::cerr << "Trimming because of ref overlap " << overlap << " ";
-	  alignment.print(std::cerr);
-	  std::cerr << " with ";
-	  a->print(std::cerr);
-	  std::cerr << std::endl;
-	  localAlignments.erase(it);
-
-	  alignment.cigar.trimQueryEnd(overlap);
-	  alignment.queryEnd -= overlap;
-	  alignment.refEnd -= overlap;
-	  return add(alignment);
-	}
       }
     }
 
@@ -127,12 +95,33 @@ struct LocalAlignments {
     int refPos = 0;
     int queryPos = 0;
     for (auto& l : localAlignments) {
+      Cigar c = l.cigar;
+      if (l.refStart < refPos) {
+	int overlap = refPos - l.refStart;
+	c.trimQueryStart(overlap);
+
+	int i = 0;
+	if (c[i].op() == CigarItem::QuerySkipped)
+	  if (c[i].length() == overlap)
+	    c.erase(c.begin());
+	  else {
+	    c[i].add(-overlap);
+	    ++i;
+	  }
+	if (c[i].op() == CigarItem::RefSkipped)
+	  if (c[i].length() == overlap)
+	    c.erase(c.begin() + i);
+	  else {
+	    c[i].add(-overlap);
+	  }
+	c.insert(c.begin(), CigarItem(CigarItem::RefGap, overlap));
+      }
       if (refPos < l.refStart)
 	result.push_back(CigarItem(CigarItem::RefSkipped, l.refStart - refPos));
       if (queryPos < l.queryStart)
 	result.push_back(CigarItem(CigarItem::QuerySkipped, l.queryStart - queryPos));
 
-      result.insert(result.end(), l.cigar.begin(), l.cigar.end());
+      result.insert(result.end(), c.begin(), c.end());
       refPos = l.refEnd;
       queryPos = l.queryEnd;
       score += l.score;
