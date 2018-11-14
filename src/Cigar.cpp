@@ -97,7 +97,9 @@ int Cigar::findAlignedPos(int refPos) const
 
 void Cigar::align(seq::NTSequence& ref, seq::NTSequence& query) const
 {
-  unsigned pos = 0;
+  int refStart = 0;
+  int queryStart = 0;
+  int pos = 0;
   int querySaldo = 0;
   bool wrapped = false;
 
@@ -116,20 +118,24 @@ void Cigar::align(seq::NTSequence& ref, seq::NTSequence& query) const
       querySaldo -= item.length();
       break;
     case CigarItem::RefSkipped:
+      if (refStart == 0)
+	refStart = item.length();
       query.insert(query.begin() + pos, item.length(), seq::Nucleotide::MISSING);
       querySaldo -= item.length();
       break;
     case CigarItem::QuerySkipped:
+      if (queryStart == 0)
+	queryStart = item.length();
       ref.insert(ref.begin() + pos, item.length(), seq::Nucleotide::MISSING);
       querySaldo += item.length();
       break;
     case CigarItem::QueryWrap:
       querySaldo = 0;
       wrapped = true;
-      for (unsigned j = pos; j < query.size(); ++j)
-	query[j - pos] = query[j];
+      for (unsigned j = pos; j < std::min(pos + refStart, (int)query.size()); ++j)
+	query[j - pos + queryStart] = query[j];
       query.erase(query.begin() + pos, query.end());
-      pos = 0;
+      pos = queryStart;
       break;
     }
 
@@ -211,30 +217,6 @@ Cigar Cigar::createFromAlignment(const seq::NTSequence& ref,
   }
 
   return alignment;
-}
-
-int Cigar::queryStartExcess() const
-{
-  if (size() < 2)
-    return 0;
-
-  if ((*this)[0].op() == CigarItem::QuerySkipped &&
-      (*this)[1].op() != CigarItem::RefSkipped)
-    return (*this)[0].length();
-
-  return 0;
-}
-
-int Cigar::queryEndExcess() const
-{
-  if (size() < 2)
-    return 0;
-
-  if ((*this)[size() - 1].op() == CigarItem::QuerySkipped &&
-      (*this)[size() - 2].op() != CigarItem::RefSkipped)
-    return (*this)[size() - 1].length();
-
-  return 0;
 }
 
 bool Cigar::queryWrapped() const
@@ -399,6 +381,8 @@ void Cigar::trimQueryStart(int alignmentLength)
       break;
   }
 
+  // must be first (query skipped), then (ref skipped)
+  
   if (refSkipI >= 0)
     (*this)[refSkipI].add(refSkipped);
 
@@ -406,7 +390,10 @@ void Cigar::trimQueryStart(int alignmentLength)
     (*this)[querySkipI].add(querySkipped);
 
   if (refSkipI < 0)
-    insert(begin(), CigarItem(CigarItem::RefSkipped, refSkipped));
+    if (querySkipI == 0)
+      insert(begin() + 1, CigarItem(CigarItem::RefSkipped, refSkipped));
+    else
+      insert(begin(), CigarItem(CigarItem::RefSkipped, refSkipped));
 
   if (querySkipI < 0)
     insert(begin(), CigarItem(CigarItem::QuerySkipped, querySkipped));    
@@ -486,6 +473,8 @@ void Cigar::trimQueryEnd(int alignmentLength)
       break;
   }
 
+  // must be last (query skipped), then (ref skipped)
+  
   if (refSkipI >= 0)
     (*this)[size() - refSkipI - 1].add(refSkipped);
 
@@ -493,7 +482,10 @@ void Cigar::trimQueryEnd(int alignmentLength)
     (*this)[size() - querySkipI - 1].add(querySkipped);
 
   if (refSkipI < 0)
-    push_back(CigarItem(CigarItem::RefSkipped, refSkipped));
+    if (querySkipI == 0)
+      insert(begin() + size() - 1, CigarItem(CigarItem::RefSkipped, refSkipped));
+    else
+      push_back(CigarItem(CigarItem::RefSkipped, refSkipped));
 
   if (querySkipI < 0)
     push_back(CigarItem(CigarItem::QuerySkipped, querySkipped));
@@ -547,18 +539,19 @@ Cigar Cigar::fromString(const std::string& s)
   return result;
 }
 
-void Cigar::removeLastRefSkipped()
+void Cigar::removeLastSkipped()
 {
-  for (unsigned i = 0; i < size(); ++i) {
-    auto& item = (*this)[size() - i - 1];
+  if (size() > 2) {
+    auto& item1 = (*this)[size() - 1];
+    if (item1.op() == CigarItem::RefSkipped ||
+	item1.op() == CigarItem::QuerySkipped) {
+      erase(begin() + size() - 1);
 
-    if (item.op() == CigarItem::RefSkipped) {
-      erase(begin() + size() - i - 1);
-      return;
+      auto& item = (*this)[size() - 1];
+      if (item.op() == CigarItem::RefSkipped ||
+	  item.op() == CigarItem::QuerySkipped)
+	erase(begin() + size() - 1);
     }
-
-    if (item.op() != CigarItem::QuerySkipped)
-      return;
   }
 }
 
@@ -587,7 +580,7 @@ void Cigar::wrapAround(int refLength)
 	  if (p2 != 0) {
 	    insert(begin() + i, CigarItem(CigarItem::Match, p2));
 	  }
-	  removeLastRefSkipped();
+	  removeLastSkipped();
 	}
 	return;
       }
@@ -614,7 +607,7 @@ void Cigar::wrapAround(int refLength)
 	  if (p2 != 0) {
 	    insert(begin() + i, CigarItem(op, p2));
 	  }
-	  removeLastRefSkipped();
+	  removeLastSkipped();
 	}
 	return;
       }

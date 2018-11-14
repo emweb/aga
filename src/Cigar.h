@@ -120,9 +120,6 @@ struct Cigar : public std::vector<CigarItem>
   static Cigar createFromAlignment(const seq::NTSequence& ref,
 				   const seq::NTSequence& query);
 
-  int queryStartExcess() const;
-  int queryEndExcess() const;
-
   int queryStart() const;
   int queryEnd() const;
 
@@ -143,7 +140,7 @@ struct Cigar : public std::vector<CigarItem>
   std::vector<bool> refCovered(int refLength) const;
   
 private:
-  void removeLastRefSkipped();
+  void removeLastSkipped();
 };
 
 extern std::ostream& operator<<(std::ostream& o, const Cigar& c);
