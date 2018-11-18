@@ -510,12 +510,14 @@ getCDSAlignments(const Cigar& cigar, const seq::NTSequence& ref,
 	  if (currentQueryGap != i)
 	    ++queryFrameshifts;
 	  currentQueryGap = 0;
-	} else if (currentRefGap > 0 && currentRefGap % 3 == 0 && i % 3 != 0)
+	} else if (currentRefGap > 0 && currentRefGap % 3 == 0 && i % 3 != 0) {
 	  refMisAlignedGaps.insert(i / 3); // codon-misaligned gap X--X
+	}
 
-	if (currentRefGap % 3 != 0 && i % 3 != currentRefGap % 3)
+	if (currentRefGap % 3 != 0 && i % 3 != currentRefGap % 3) {
 	  refMisAlignedGaps.insert(i / 3); // frameshift gap in ref: X
-	
+	}
+
 	while (currentRefGap % 3 != 0) {
 	  cdsRef.insert(cdsRef.begin() + i, seq::Nucleotide::GAP);
 	  cdsQuery.insert(cdsQuery.begin() + i, seq::Nucleotide::GAP);
@@ -738,8 +740,8 @@ void optimizeMisaligned(CDSAlignment& alignment,
 	int aa2 = (i - (i % 3)) / 3;
 
 	if (refGap) {
-	  alignment.refMisAlignedGaps.erase(aa1);
-	  alignment.refMisAlignedGaps.erase(aa2);
+	  for (int i = aa1; i <= aa2; ++i)
+	    alignment.refMisAlignedGaps.erase(i);
 	}
 
 	seq::NTSequence codon;
