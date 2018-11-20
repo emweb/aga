@@ -140,6 +140,18 @@ struct CDSAlignment
   std::set<int> refMisAlignedGaps;
   int queryFrameshifts;
   CodingSequence ref, query;
+
+  int refFrameshiftCount() const {
+    int result = 0;
+    int last = 0;
+    for (auto f : refFrameshifts) {
+      if (f - 1 != last)
+	++result;
+      last = f;
+    }
+
+    return result;
+  }
 };
 
 extern void optimizeMisaligned(CDSAlignment& alignment,

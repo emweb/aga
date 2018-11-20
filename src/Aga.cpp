@@ -307,7 +307,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 	  nt << a.ref.ntSequence << a.query.ntSequence;
 	auto aaStats = calcStats(a.ref.aaSequence, a.query.aaSequence,
 				 aligner.scorer().aminoAcidScorer(),
-				 a.refFrameshifts.size() + a.queryFrameshifts);
+				 a.refFrameshiftCount() + a.queryFrameshifts);
 
 	aaScore += aaStats.score;
 	if (aaStats.coverage > 0)
@@ -358,7 +358,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 
 	auto aaStats = calcStats(a.ref.aaSequence, a.query.aaSequence,
 				 aligner.scorer().aminoAcidScorer(),
-				 a.refFrameshifts.size() + a.queryFrameshifts);
+				 a.refFrameshiftCount() + a.queryFrameshifts);
 	if (aaStats.coverage > 0)
 	  std::cout << " AA " << a.ref.aaSequence.name()
 		    << ": " << aaStats << std::endl;

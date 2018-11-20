@@ -282,7 +282,7 @@ public:
     double aaScore = 0;
     for (const auto& a : aaAlignments)
       aaScore += aaScorer_.calcScore(a.ref.aaSequence, a.query.aaSequence,
-				     a.refFrameshifts.size() + a.queryFrameshifts);
+				     a.refFrameshiftCount() + a.queryFrameshifts);
 
     return ntScore + aaScore;
   }
