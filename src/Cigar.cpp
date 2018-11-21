@@ -100,7 +100,7 @@ void Cigar::align(seq::NTSequence& ref, seq::NTSequence& query) const
   int refStart = 0;
   int queryStart = 0;
   int pos = 0;
-  int querySaldo = 0;
+  int querySaldo = 0; // difference in aligned length, needed after wrapping
   bool wrapped = false;
 
   for (unsigned i = 0; i < size(); ++i) {
@@ -112,6 +112,8 @@ void Cigar::align(seq::NTSequence& ref, seq::NTSequence& query) const
     case CigarItem::RefGap:
       ref.insert(ref.begin() + pos, item.length(), seq::Nucleotide::GAP);
       querySaldo += item.length();
+      if (wrapped)
+	refStart += item.length();
       break;
     case CigarItem::QueryGap:
       query.insert(query.begin() + pos, item.length(), seq::Nucleotide::GAP);
@@ -128,6 +130,8 @@ void Cigar::align(seq::NTSequence& ref, seq::NTSequence& query) const
 	queryStart = item.length();
       ref.insert(ref.begin() + pos, item.length(), seq::Nucleotide::MISSING);
       querySaldo += item.length();
+      if (wrapped)
+	refStart += item.length();
       break;
     case CigarItem::QueryWrap:
       querySaldo = 0;
@@ -148,6 +152,9 @@ void Cigar::align(seq::NTSequence& ref, seq::NTSequence& query) const
     } else if (querySaldo < 0) {
       query.erase(query.begin() + pos, query.begin() + pos - querySaldo);
     }
+
+    for (int i = pos; i < refStart; ++i)
+      query[i] = seq::Nucleotide::MISSING;
   }
 }
 
