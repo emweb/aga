@@ -63,9 +63,6 @@ LocalAlignment LocalAligner<Scorer, Reference, Query, SideN>
 	    const std::vector<std::vector<ArrayItems>>& work,
 	    const std::vector<LocalAlignment>& column0) const
 {
-  /* Trace back to start and construct cigar -- reverse in the end and append */
-  Cigar rCigar;
-
   LocalAlignment result;
   result.refEnd = stripeI + i + 1; // past end
   result.queryEnd = j + 1; // past end
@@ -73,9 +70,15 @@ LocalAlignment LocalAligner<Scorer, Reference, Query, SideN>
   int hi = i + 1;
   int hj = j + 1;
 
-  CigarItem::Op lastOp;
   const ArrayItem *ai = &work[hi][hj].D;
 
+  if (ai->score <= 0)
+    return result;
+
+  /* Trace back to start and construct cigar -- reverse in the end and append */
+  Cigar rCigar;
+  CigarItem::Op lastOp;
+  
   for (;;) {
     if (ai->score <= 0) {
       switch (lastOp) {
