@@ -675,6 +675,16 @@ void optimizeMisaligned(CDSAlignment& alignment,
   seq::NTSequence& ntRef = alignment.ref.ntSequence;
   seq::AASequence& aaRef = alignment.ref.aaSequence;
 
+  seq::NTSequence GapCodon;
+  for (int j = 0; j < 3; ++j) {
+    GapCodon.push_back(seq::Nucleotide::GAP);
+  }
+
+  auto copyCodon = [](seq::NTSequence& result, const seq::NTSequence& codon, int pos) {
+    for (int j = 0; j < 3; ++j)
+      result[pos + j] = codon[j];
+  };
+
   int gapLength = -1;
   for (unsigned i = 0; i < ntRef.size(); ++i) {
     if (ntRef[i] == seq::Nucleotide::GAP) {
@@ -682,25 +692,31 @@ void optimizeMisaligned(CDSAlignment& alignment,
 	++gapLength;
     } else {
       if (gapLength > 0 && gapLength % 3 == 0 && i % 3 != 0) {
-	int aa1 = (i - gapLength - (i % 3)) / 3;
-	int aa2 = (i - (i % 3)) / 3;
+	int nt1 = (i - gapLength - (i % 3));
+	int aa1 = nt1 / 3;
+	int nt2 = (i - (i % 3));
+	int aa2 = nt2 / 3;
 
 	seq::NTSequence refCodon;
 	for (int j = 0; j < i % 3; ++j) {
-	  refCodon.push_back(ntRef[i - gapLength - (i % 3) + j]);
+	  refCodon.push_back(ntRef[nt1 + j]);
 	}
 
 	for (int j = i % 3; j < 3; ++j) {
-	  refCodon.push_back(ntRef[i - (i % 3) + j]);
+	  refCodon.push_back(ntRef[nt2 + j]);
 	}
 
 	seq::AminoAcid refAa = seq::Codon::translate(refCodon.begin());
 	if (i % 3 == 1) {
 	  aaRef[aa1] = seq::AminoAcid::GAP;
 	  aaRef[aa2] = refAa;
+	  copyCodon(ntRef, GapCodon, nt1);
+	  copyCodon(ntRef, refCodon, nt2);
 	} else {
 	  aaRef[aa1] = refAa;
 	  aaRef[aa2] = seq::AminoAcid::GAP;
+	  copyCodon(ntRef, refCodon, nt1);
+	  copyCodon(ntRef, GapCodon, nt2);
 	}
       }
       gapLength = 0;
@@ -736,8 +752,10 @@ void optimizeMisaligned(CDSAlignment& alignment,
 	seq::NTSequence& ntOther = refGap ? ntQuery : ntRef;
 	seq::AASequence& aaOther = refGap ? aaQuery : aaRef;
 
-	int aa1 = (i - gapLength - (i % 3)) / 3;
-	int aa2 = (i - (i % 3)) / 3;
+	int nt1 = (i - gapLength - (i % 3));
+	int aa1 = nt1 / 3;
+	int nt2 = (i - (i % 3));
+	int aa2 = nt2 / 3;
 
 	if (refGap) {
 	  for (int i = aa1; i <= aa2; ++i)
@@ -746,9 +764,9 @@ void optimizeMisaligned(CDSAlignment& alignment,
 
 	seq::NTSequence codon;
 	for (int j = 0; j < i % 3; ++j)
-	  codon.push_back(ntEdit[i - gapLength - (i % 3) + j]);
+	  codon.push_back(ntEdit[nt1 + j]);
 	for (int j = i % 3; j < 3; ++j)
-	  codon.push_back(ntEdit[i - (i % 3) + j]);
+	  codon.push_back(ntEdit[nt2 + j]);
 	
 	seq::AminoAcid editAa = seq::Codon::translate(codon.begin());
 
@@ -767,9 +785,13 @@ void optimizeMisaligned(CDSAlignment& alignment,
 	if (score2 > score1) {
 	  aaEdit[aa1] = seq::AminoAcid::GAP;
 	  aaEdit[aa2] = editAa;
+	  copyCodon(ntEdit, GapCodon, nt1);
+	  copyCodon(ntEdit, codon, nt2);
 	} else {
 	  aaEdit[aa1] = editAa;
 	  aaEdit[aa2] = seq::AminoAcid::GAP;
+	  copyCodon(ntEdit, codon, nt1);
+	  copyCodon(ntEdit, GapCodon, nt2);
 	}
       }
 
