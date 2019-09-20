@@ -29,7 +29,6 @@ AASequence::AASequence(const const_reverse_iterator first,
 AASequence::AASequence(const std::string name,
 		       const std::string description,
 		       const std::string aSeqString)
-  throw (ParseException)
   : std::vector<AminoAcid>(aSeqString.length()),
     name_(name),
     description_(description)
@@ -93,15 +92,13 @@ AASequence AASequence::translate(const NTSequence& ntSequence)
 extern void readFastaEntry(std::istream& i,
 			   std::string& name,
 			   std::string& description,
-			   std::string& sequence)
-  throw (ParseException);
+			   std::string& sequence);
 extern void writeFastaEntry(std::ostream& o,
 			    const std::string& name,
 			    const std::string& description,
 			    const std::string& sequence);
 
 std::istream& operator>>(std::istream& i, AASequence& sequence)
-  throw (ParseException)
 {
   std::string name, description, seqString;
 

@@ -630,6 +630,9 @@ Genome readGenome(const std::string& fasta, const std::string& cds,
     if (cds == "circular") {
       result.setGeometry(Genome::Geometry::Circular);
       continue;
+    } else if (cds == "linear") {
+      result.setGeometry(Genome::Geometry::Linear);
+      continue;
     }
 
     std::string type;

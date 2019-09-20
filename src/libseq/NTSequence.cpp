@@ -23,7 +23,6 @@ NTSequence::NTSequence(unsigned size)
 NTSequence::NTSequence(const std::string& name, const std::string& description,
 		       const std::string& aSeqString,
 		       bool sampleAmbiguities)
-  throw (ParseException)
   : std::vector<Nucleotide>(aSeqString.length()),
     name_(name),
     description_(description)
@@ -114,7 +113,6 @@ void readFastaEntry(std::istream& i,
 		    std::string& name,
 		    std::string& description,
 		    std::string& sequence)
-  throw (ParseException)
 {
     char ch;
     char c[64*1024];
@@ -219,7 +217,6 @@ void writeStockholm(std::ostream& o, const std::vector<NTSequence>& sequences, i
 /// \endcond
 
 std::istream& operator>>(std::istream& i, NTSequence& sequence)
-  throw (ParseException)
 {
   std::string name, description, seqString;
 

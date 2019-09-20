@@ -49,8 +49,7 @@ public:
    */
   AASequence(const std::string name,
 	     const std::string description,
-	     const std::string aSeqString)
-    throw (ParseException);
+	     const std::string aSeqString);
 
   /**
    * Create a nucleotide sequence with empty name and emtpy
@@ -124,8 +123,7 @@ private:
 /**
  * Read an amino acid sequence in FASTA format from the given stream.
  */
-extern std::istream& operator>>(std::istream& i, AASequence& sequence)
-  throw (ParseException);
+extern std::istream& operator>>(std::istream& i, AASequence& sequence);
 
 /**
  * Write an amino acid sequence to the given stream in FASTA format.

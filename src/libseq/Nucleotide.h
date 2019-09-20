@@ -88,8 +88,7 @@ public:
    *
    * \sa toChar()
    */
-  Nucleotide(char c)
-    throw (ParseException);
+  Nucleotide(char c);
 
   /**
    * Create a nucleotide using the internal representation directly.
@@ -191,7 +190,6 @@ private:
 extern std::ostream& operator<< (std::ostream& o, const Nucleotide nt);
 
 inline Nucleotide::Nucleotide(char c)
-  throw (ParseException)
 {
   switch (toupper(c)) {
   case 'A': rep_ = NT_A; break;

@@ -56,8 +56,7 @@ public:
   NTSequence(const std::string& name,
 	     const std::string& description,
 	     const std::string& aSeqString,
-	     bool sampleAmbiguities = false)
-    throw (ParseException);
+	     bool sampleAmbiguities = false);
 
   /**
    * Create a nucleotide sequence with empty name and emtpy
@@ -127,8 +126,7 @@ extern void writeStockholm(std::ostream& o,
 /**
  * Read a nucleotide sequence in FASTA format from the given stream.
  */
-extern std::istream& operator>>(std::istream& i, NTSequence& sequence)
-  throw (ParseException);
+extern std::istream& operator>>(std::istream& i, NTSequence& sequence);
 
 /**
  * Write a nucleotide sequence to the given stream in FASTA format.

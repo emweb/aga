@@ -54,7 +54,6 @@ AminoAcid::AminoAcid()
 { }
 
 AminoAcid::AminoAcid(char c)
-  throw (ParseException)
 {
   switch (toupper(c)) {
   case 'A': rep_ = AA_A; break;

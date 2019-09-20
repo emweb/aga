@@ -107,8 +107,7 @@ public:
    *
    * \sa toChar()
    */
-  AminoAcid(char c)
-    throw (ParseException);
+  AminoAcid(char c);
 
   /**
    * Create an amino acid using the internal representation directly.
