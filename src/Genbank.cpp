@@ -255,6 +255,9 @@ Genome getGenome(const GenbankRecord& record)
 	  name = f.qualifiers.at("product");
 	else
 	  description = f.qualifiers.at("product");
+      if (name.empty())
+      	if (f.qualifiers.count("note") > 0)
+	  name = f.qualifiers.at("note");
 
       int i = result.cdsFeatures().size() + 1;
 
