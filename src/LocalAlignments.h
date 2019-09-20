@@ -104,15 +104,21 @@ struct LocalAlignments {
 	if (c[i].op() == CigarItem::QuerySkipped)
 	  if (c[i].length() == overlap)
 	    c.erase(c.begin());
-	  else {
+	  else if (c[i].length() > overlap) {
 	    c[i].add(-overlap);
 	    ++i;
+	  } else {
+	    // skip this local alignment
+	    continue;
 	  }
 	if (c[i].op() == CigarItem::RefSkipped)
 	  if (c[i].length() == overlap)
 	    c.erase(c.begin() + i);
-	  else {
+	  else if (c[i].length() > overlap) {
 	    c[i].add(-overlap);
+	  } else {
+	    // skip this local alignment
+	    continue;
 	  }
 	c.insert(c.begin(), CigarItem(CigarItem::RefGap, overlap));
       }
