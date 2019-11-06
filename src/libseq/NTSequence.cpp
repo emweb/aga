@@ -52,6 +52,16 @@ void NTSequence::sampleAmbiguities()
   }
 }
 
+void NTSequence::degap()
+{
+  int i, j;
+  for (i = 0, j=0; i < size(); ++i) {
+    if ((*this)[i] != Nucleotide::GAP && (*this)[i] != Nucleotide::MISSING)
+      (*this)[j++] = (*this)[i];
+  }
+  resize(j);
+}
+
 NTSequence NTSequence::reverseComplement() const
 {
   NTSequence result(size());

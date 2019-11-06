@@ -74,6 +74,11 @@ public:
    */
   void sampleAmbiguities();
 
+  /**
+   * degap makes the sequence smaller by removing all gap and missing symbols
+   */
+  void degap();
+
   NTSequence reverseComplement() const;
 
   /**

@@ -608,6 +608,10 @@ Genome readGenome(const std::string& fasta, const std::string& cds,
 
   std::ifstream f(fasta);
   f >> result;
+  // degapping allows the fasta file to either be a genbank
+  // reference file, or an alignment where the first entry is
+  // the reference
+  result.degap();
   result.sampleAmbiguities();
   
   std::ifstream annotationsFile(cds);
