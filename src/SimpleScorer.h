@@ -71,6 +71,7 @@ extern std::ostream& operator<< (std::ostream& o, const AlignmentStats& stats);
 extern void asJson(std::ostream& o, const std::string& id,
 		   const AlignmentStats& stats,
 		   const std::string& mutationStr,
+		   const std::string& codonMutationStr,
 		   const std::string& cds, int cdsBegin, int cdsEnd);
 
 template <class Sequence>
@@ -331,8 +332,10 @@ public:
     int refPos = 0;
     for (unsigned i = 0; i < queryEnd; ++i) {
       if ((ref[i] == Character::GAP || ref[i] == Character::MISSING) &&
-	  (query[i] == Character::GAP || query[i] == Character::MISSING))
+	  (query[i] == Character::GAP || query[i] == Character::MISSING)) {
+	++refPos;
 	continue;
+      }
 
       int score = 0;
       

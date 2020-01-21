@@ -40,7 +40,9 @@ std::ostream& operator<< (std::ostream& o, const AlignmentStats& stats)
 }
 
 void asJson(std::ostream& o, const std::string& id, const AlignmentStats& stats,
-	    const std::string& mutationStr, const std::string& cds, int cdsBegin, int cdsEnd)
+	    const std::string& mutationStr,
+	    const std::string& codonMutationStr,
+	    const std::string& cds, int cdsBegin, int cdsEnd)
 {
   double alignLength = stats.matchCount + stats.insertCount + stats.deleteCount;
 
@@ -65,7 +67,8 @@ void asJson(std::ostream& o, const std::string& id, const AlignmentStats& stats,
       << "\"frameshifts\" : " << stats.frameShifts << ", "
       << "\"ambiguities\" : " << stats.ambiguities << ", "
       << "\"stopCodons\" : " << stats.stopCodons << ", "
-      << "\"mutations\" : \"" << mutationStr << "\"";
+      << "\"mutations\" : \"" << mutationStr << "\", "
+      << "\"codonMutations\" : \"" << codonMutationStr << "\"";
   }
 
   o << " }";
