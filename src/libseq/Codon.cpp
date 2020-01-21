@@ -8,6 +8,18 @@
 
 namespace seq {
 
+const Codon Codon::GAP = { seq::Nucleotide::GAP,
+			   seq::Nucleotide::GAP,
+			   seq::Nucleotide::GAP };
+
+const Codon Codon::MISSING = { seq::Nucleotide::MISSING,
+			       seq::Nucleotide::MISSING,
+			       seq::Nucleotide::MISSING };
+
+Codon::Codon(std::initializer_list<seq::Nucleotide> init)
+  : std::vector<seq::Nucleotide>(init)
+{ }
+
 AminoAcid Codon::translate(const NTSequence::const_iterator triplet)
 {
   static const AminoAcid codonTable[4][4][4] = {
@@ -274,6 +286,17 @@ std::set<NTSequence> Codon::codonsFor(AminoAcid a)
   }
 
   return result;
+}
+
+std::string Codon::toStr() const
+{
+  std::string s(3, '-');
+
+  s[0] = (*this)[0].toChar();
+  s[1] = (*this)[1].toChar();
+  s[2] = (*this)[2].toChar();
+
+  return s;
 }
 
 };

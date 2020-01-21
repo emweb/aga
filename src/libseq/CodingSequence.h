@@ -25,7 +25,9 @@ namespace seq {
  */
 class CodingSequence
 {
- public:
+public:
+  typedef Codon value_type;
+
   /**
    * Construct a coding sequence with empty nucleotide sequence.
    */
@@ -51,6 +53,10 @@ class CodingSequence
    */
   const AASequence& aaSequence() const;
 
+  unsigned size() const { return aaSequence().size(); }
+
+  Codon operator[] (int i) const;
+  
   void setName(const std::string& name);
   
   /**

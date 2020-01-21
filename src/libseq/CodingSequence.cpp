@@ -31,6 +31,13 @@ const AASequence& CodingSequence::aaSequence() const
   return aaSequence_;
 }
 
+Codon CodingSequence::operator[] (int i) const
+{
+  int ntI = i * 3;
+
+  return { ntSequence_[ntI], ntSequence_[ntI + 1], ntSequence_[ntI + 2] };
+}
+
 void CodingSequence::setName(const std::string& name)
 {
   ntSequence_.setName(name);

@@ -29,6 +29,8 @@ namespace seq {
 class Nucleotide
 {
 public:
+  static const int NucleotideLength = 1;
+
   /**
    * @name Constants used in the internal representation.
    * \sa intRep() and fromRep(int).
@@ -112,6 +114,10 @@ public:
     return NT_CHAR[rep_];
   }
 
+  std::string toStr() const {
+    return std::string(1, toChar());
+  }
+  
   /**
    * Get the internal representation.
    *
@@ -148,7 +154,7 @@ public:
   bool isSimple() const { return rep_ <= NT_T; }
 
   bool isStopCodon() const { return false; }
-
+  
   /**
    * Replace the (ambiguos) nucleotide with a random non-ambigiuos nucleotide
    * that is represented by the ambiguity symbol.

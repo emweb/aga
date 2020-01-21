@@ -18,9 +18,15 @@ namespace seq {
 /**
  * Utility class that defines the genetic code.
  */
-class Codon
+class Codon : public std::vector<seq::Nucleotide>
 {
 public:
+  static const int NucleotideLength = 3;
+  static const Codon GAP;
+  static const Codon MISSING;
+
+  Codon(std::initializer_list<seq::Nucleotide> init);
+  
   /**
    * Translate a nucleotide triplet (given by the range starting and
    * the indicated start point in a NTSequence) into an AminoAcid.
@@ -36,6 +42,8 @@ public:
      translateAll(const NTSequence::const_iterator triplet);
 
   static std::set<NTSequence> codonsFor(AminoAcid a);
+
+  std::string toStr() const;
 };
 
 };

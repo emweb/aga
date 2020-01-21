@@ -25,6 +25,8 @@ namespace seq {
  */
 class AminoAcid {
 public:
+  static const int NucleotideLength = 3;
+  
   /**
    * @name Constants used in the internal representation.
    * \sa intRep() and fromRep(int).
@@ -131,6 +133,10 @@ public:
     return AA_CHAR[rep_];
   }
 
+  std::string toStr() const {
+    return std::string(1, toChar());
+  }
+
   /**
    * Is the amino acid ambiguous ?
    *
@@ -146,7 +152,7 @@ public:
   bool isSimple() const { return true; }
 
   bool isStopCodon() const { return rep_ == AA_STP; }
-  
+
   /**
    * Get the three letter abbreviation for this amino acid.
    *
