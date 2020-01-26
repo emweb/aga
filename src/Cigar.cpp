@@ -36,6 +36,7 @@ int Cigar::findAlignedPos(int refPos) const
       refI += item.length();
       aPos += item.length();
       break;
+    case CigarItem::BothGap:
     case CigarItem::RefGap:
       aPos += item.length();
       break;
@@ -67,6 +68,7 @@ int Cigar::findAlignedPos(int refPos) const
 	refI += item.length();
 	aPos += item.length();
 	break;
+      case CigarItem::BothGap:
       case CigarItem::RefGap:
 	aPos += item.length();
 	break;
@@ -108,6 +110,12 @@ void Cigar::align(seq::NTSequence& ref, seq::NTSequence& query) const
 
     switch (item.op()) {
     case CigarItem::Match:
+      break;
+    case CigarItem::BothGap:
+      ref.insert(ref.begin() + pos, item.length(), seq::Nucleotide::GAP);
+      query.insert(query.begin() + pos, item.length(), seq::Nucleotide::GAP);
+      if (wrapped)
+	refStart += item.length();
       break;
     case CigarItem::RefGap:
       ref.insert(ref.begin() + pos, item.length(), seq::Nucleotide::GAP);
@@ -169,12 +177,22 @@ Cigar Cigar::createFromAlignment(const seq::NTSequence& ref,
     seq::Nucleotide r = ref[i];
     seq::Nucleotide q = query[i];
 
+
+    /*
     if ((r == seq::Nucleotide::GAP || r == seq::Nucleotide::MISSING) &&
 	(q == seq::Nucleotide::GAP || q == seq::Nucleotide::MISSING))
       continue;
+    */
     
     if (r == seq::Nucleotide::GAP) {
-      if (current.op() != CigarItem::RefGap) {
+      if (q == seq::Nucleotide::GAP) {
+	if (current.op() != CigarItem::BothGap) {
+	  if (current.length() > 0) 
+	    alignment.push_back(current);
+	  current = CigarItem(CigarItem::BothGap);
+	} else
+	  current.add();
+      } else if (current.op() != CigarItem::RefGap) {
 	if (current.length() > 0) 
 	  alignment.push_back(current);
 	current = CigarItem(CigarItem::RefGap);
@@ -270,6 +288,7 @@ int Cigar::queryEnd() const
     case CigarItem::RefSkipped:
     case CigarItem::QueryGap:
       break;
+    case CigarItem::BothGap:
     case CigarItem::RefGap:
     case CigarItem::QuerySkipped:
       refPos -= item.length();
@@ -297,6 +316,7 @@ void Cigar::removeUnalignedQuery(seq::NTSequence& query)
       qpos += item.length();
       break;
 
+    case CigarItem::BothGap:
     case CigarItem::QueryGap:
       break;
 
@@ -350,6 +370,17 @@ void Cigar::trimQueryStart(int alignmentLength)
       }
       break;
 
+    case CigarItem::BothGap:
+      if (remain >= item.length()) {
+	remain -= item.length();
+	erase(begin() + i);
+	--i;
+      } else {
+	item.add(-remain);
+	remain = 0;
+      }
+      break;      
+      
     case CigarItem::RefGap:
       if (remain >= item.length()) {
 	querySkipped += item.length();
@@ -442,6 +473,17 @@ void Cigar::trimQueryEnd(int alignmentLength)
       }
       break;
 
+    case CigarItem::BothGap:
+      if (remain >= item.length()) {
+	remain -= item.length();
+	erase(begin() + itemI);
+	--i;
+      } else {
+	item.add(-remain);
+	remain = 0;
+      }
+      break;
+
     case CigarItem::RefGap:
       if (remain >= item.length()) {
 	querySkipped += item.length();
@@ -523,6 +565,7 @@ Cigar Cigar::fromString(const std::string& s)
     char sop = s[i];
     switch (sop) {
     case 'M': op = CigarItem::Match; break;
+    case 'G': op = CigarItem::BothGap; break;
     case 'I': op = CigarItem::RefGap; break;
     case 'D': op = CigarItem::QueryGap; break;
     case 'X': op = CigarItem::RefSkipped; break;
@@ -593,6 +636,7 @@ void Cigar::wrapAround(int refLength)
       }
       refI += item.length();
       break;
+    case CigarItem::BothGap:
     case CigarItem::RefGap:
       break;
     case CigarItem::QueryGap:
@@ -644,6 +688,7 @@ std::vector<bool> Cigar::refCovered(int refLength) const
 	result[refI + j] = true;
       refI += item.length();
       break;
+    case CigarItem::BothGap:
     case CigarItem::RefGap:
     case CigarItem::QuerySkipped:
       break;
@@ -660,7 +705,7 @@ std::vector<bool> Cigar::refCovered(int refLength) const
 
 std::ostream& operator<<(std::ostream& o, const CigarItem& c)
 {
-  static char charS[] = { 'M', 'I', 'D', 'X', 'O' };
+  static char charS[] = { 'M', 'I', 'D', 'X', 'O', 'W', 'G' };
 
   if (c.op() == CigarItem::QueryWrap)
     o << 'W';

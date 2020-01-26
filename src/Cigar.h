@@ -21,7 +21,8 @@ struct CigarItem
     QueryGap = 2,
     RefSkipped = 3,
     QuerySkipped = 4,
-    QueryWrap = 5
+    QueryWrap = 5,
+    BothGap = 6
   };
 
   CigarItem(Op op)
@@ -48,6 +49,10 @@ struct CigarItem
 
   bool isQueryGap() const {
     return op() == QueryGap;
+  }
+
+  bool isBothGap() const {
+    return op() == BothGap;
   }
 
   void add() {
