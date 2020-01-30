@@ -476,7 +476,9 @@ getCDSAlignments(const Cigar& cigar, const seq::NTSequence& ref,
       if (!overlap)
 	continue;
     }
-    
+
+    CDSAlignment cdsAa;
+
     for (const auto& r : f.location) {
       int alignedStart = alignment.findAlignedPos(r.start);
       int alignedEnd = alignment.findAlignedPos(r.end - 1) + 1;
@@ -485,11 +487,17 @@ getCDSAlignments(const Cigar& cigar, const seq::NTSequence& ref,
 		    ref.begin() + alignedStart, ref.begin() + alignedEnd);
       cdsQuery.insert(cdsQuery.end(),
 		      query.begin() + alignedStart, query.begin() + alignedEnd);
+
+      int s = cdsAa.alignmentPositions.size();
+      cdsAa.alignmentPositions.resize(s + (alignedEnd - alignedStart));
+      for (int i = 0; i < alignedEnd - alignedStart; ++i)
+	cdsAa.alignmentPositions[s + i] = alignedStart + i;
     }
 
     if (f.complement) {
       cdsRef = cdsRef.reverseComplement();
       cdsQuery = cdsQuery.reverseComplement();
+      std::reverse(cdsAa.alignmentPositions.begin(), cdsAa.alignmentPositions.end());
     }
 
     /*
@@ -521,6 +529,7 @@ getCDSAlignments(const Cigar& cigar, const seq::NTSequence& ref,
 	while (currentRefGap % 3 != 0) {
 	  cdsRef.insert(cdsRef.begin() + i, seq::Nucleotide::GAP);
 	  cdsQuery.insert(cdsQuery.begin() + i, seq::Nucleotide::GAP);
+	  cdsAa.alignmentPositions.insert(cdsAa.alignmentPositions.begin() + i, -1);
 	  ++currentRefGap;
 	  refFrameshiftsCorrected.insert(i);
 	  ++i;
@@ -533,9 +542,10 @@ getCDSAlignments(const Cigar& cigar, const seq::NTSequence& ref,
     while (cdsRef.size() % 3 != 0) {
       cdsRef.erase(cdsRef.begin() + cdsRef.size() - 1);
       cdsQuery.erase(cdsQuery.begin() + cdsQuery.size() - 1);
+      cdsAa.alignmentPositions.erase(cdsAa.alignmentPositions.begin() +
+				     cdsAa.alignmentPositions.size() - 1);
     }
 
-    CDSAlignment cdsAa;
     cdsRef.setName(f.aaSeq.name());
     cdsAa.ref = CodingSequence(cdsRef);
     cdsAa.query = CodingSequence(cdsQuery);

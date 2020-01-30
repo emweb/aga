@@ -141,6 +141,8 @@ struct CDSAlignment
   int queryFrameshifts;
   CodingSequence ref, query;
 
+  std::vector<int> alignmentPositions;
+
   int refFrameshiftCount() const {
     int result = 0;
     int last = 0;
