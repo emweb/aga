@@ -215,6 +215,7 @@ inline Nucleotide::Nucleotide(char c)
   case 'N': rep_ = NT_N; break;
   case '-': rep_ = NT_GAP; break;
   case '.': rep_ = NT_MISSING; break;
+  case 'I': rep_ = NT_D; break; // supposedly inosine
   default:
     throw ParseException
       (std::string(),
