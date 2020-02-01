@@ -12,6 +12,7 @@
 
 #include "SubstitutionMatrix.h"
 #include "Cigar.h"
+#include "SearchRange.h"
 
 template <class Scorer, class Reference, class Query, int SideN>
 class GlobalAligner
@@ -28,7 +29,7 @@ public:
     Cigar cigar;
   };
 
-  Solution align(const Reference& seq1, const Query& seq2, int minScore = 0);
+  Solution align(const Reference& seq1, const Query& seq2, const Cigar& seed);
 
   Scorer& scorer() { return scorer_; }
   
@@ -39,12 +40,14 @@ private:
 template <class Scorer, class Reference, class Query, int SideN>
 typename GlobalAligner<Scorer, Reference, Query, SideN>::Solution
 GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, const Query& query,
-						      int minScore)
+						      const Cigar& seed)
 {
   std::vector<Solution> result(query.size() + 1);
 
-  for (unsigned j = 0; j < query.size(); ++j) {
-    unsigned hj = j + 1;
+  const SearchRange sr = getSearchRange(seed, ref.size(), query.size());
+
+  for (unsigned hj = std::max(1, sr.startRow(0)); hj < sr.endRow(0); ++hj) {
+    unsigned j = hj - 1;
     result[hj].cigar = result[hj - 1].cigar;
     result[hj].cigar.addRefGap();
     if (j == 0)
@@ -55,10 +58,12 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 
   result[0].cigar.push_back(CigarItem(CigarItem::QueryGap, 0));
 
+  static const int INVALID_SCORE = -10000;
+
   struct ArrayItem {
     ArrayItem()
       : op(CigarItem::Match),
-	score(0)
+	score(INVALID_SCORE)
     { }
 
     CigarItem op;
@@ -75,8 +80,6 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 
   std::vector<std::vector<ArrayItems>> work(N + 1, std::vector<ArrayItems>(query.size() + 1));
 
-  static const int INVALID_SCORE = -10000;
-
 //#define TRACE
 #ifdef TRACE
   static const int traceI = 6, traceJ = 5;
@@ -86,18 +89,19 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
     unsigned n = std::min((unsigned)(ref.size() - stripeI), N);
 
     if (stripeI == 0) {
-      for (unsigned hj = 0; hj < query.size() + 1; ++hj) {
+      for (unsigned hj = sr.startRow(0); hj < sr.endRow(0); ++hj) {
 	work[0][hj].D.score = result[hj].score;
 	work[0][hj].D.op = result[hj].cigar.back();
 	work[0][hj].M = work[0][hj].D;
 
 	for (unsigned k = 0; k < SideN; ++k) {
 	  work[0][hj].P[k].score = INVALID_SCORE;
-	  work[0][hj].P[k].op = CigarItem(CigarItem::RefGap, 0);	  
+	  work[0][hj].P[k].op = CigarItem(CigarItem::RefGap, 0); 
 	  work[0][hj].Q[k].score = INVALID_SCORE;
-	  work[0][hj].Q[k].op = CigarItem(CigarItem::QueryGap, 0);	  
+	  work[0][hj].Q[k].op = CigarItem(CigarItem::QueryGap, 0);
 	}
       }
+
       work[0][0].D.op = CigarItem(CigarItem::QueryGap, 0);
       work[0][0].D.score = scorer_.scoreOpenQueryGap(ref, query, -1, -1);
       work[0][0].M = work[0][0].D;
@@ -116,8 +120,8 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
       for (unsigned k = 0; k < SideN; ++k)
 	work[hi][0].Q[k].op.add();
 
-      for (unsigned j = 0; j < query.size(); ++j) {
-	unsigned hj = j + 1;
+      for (unsigned hj = std::max(1, sr.startRow(i)); hj < sr.endRow(i); ++hj) {
+	unsigned j = hj - 1;
 
 #ifdef TRACE
 	if (i == traceI && j == traceJ) {

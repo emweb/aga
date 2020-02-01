@@ -134,6 +134,7 @@ struct Cigar : public std::vector<CigarItem>
   void trimQueryEnd(int alignmentLength);
 
   void wrapAround(int pos);
+  void unwrap();
   
   std::string str() const;
   static Cigar fromString(const std::string& s);
@@ -143,6 +144,8 @@ struct Cigar : public std::vector<CigarItem>
   }
 
   std::vector<bool> refCovered(int refLength) const;
+
+  int queryAlignedPosCount() const;
   
 private:
   void removeLastSkipped();

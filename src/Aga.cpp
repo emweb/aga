@@ -67,7 +67,7 @@ std::vector<Contig> splitContigs(const seq::NTSequence& s)
   std::sort(result.begin(), result.end(), [](const Contig& a, const Contig& b) {
       return a.sequence.size() > b.sequence.size();   
     });
-  
+
   return result;
 }
 
@@ -178,6 +178,7 @@ void realignGaps(const SimpleScorer<seq::NTSequence>& nucleotideScorer,
 
 template<typename Aligner>
 void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
+	    Cigar seed,
 	    bool strictCodonBoundaries,
 	    const std::vector<CdsFeature>& proteins,
 	    const std::string& ntAlignmentFile,
@@ -196,6 +197,8 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
     linearized = unwrapLinear(ref, aligner.scorer());
     aligner.scorer().setScoreRefStartGap(true);
     aligner.scorer().setScoreRefEndGap(true);
+    if (!seed.empty())
+      seed.unwrap();
   }
   
   for (;;) {
@@ -207,7 +210,16 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 
     removeGaps(query);
 
-    std::vector<Contig> contigs = splitContigs(query);
+    std::vector<Contig> contigs;
+
+    if (seed.empty())
+      contigs = splitContigs(query);
+    else {
+      Contig c;
+      c.queryOffset = 0;
+      c.sequence = query;
+      contigs.push_back(c);
+    }
 
     LocalAlignments contigAlignments;
 
@@ -218,14 +230,18 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
       std::cout << "Started alignment of " << c.sequence.name()
 		<< " (len="
 		<< c.sequence.size() << ") against "
-		<< ref.name() << " (len=" << ref.size() << ")" << std::endl;
+		<< ref.name() << " (len=" << ref.size() << ")";
+
+      if (!seed.empty())
+	std::cerr << " using seed of length " << seed.queryAlignedPosCount();
+      std::cerr << std::endl;
 
       typename Aligner::Solution solution;
 
       if (c.sequence.size() > 0) {
 	c.sequence.sampleAmbiguities();
 	solution = aligner.align(circular ? linearized : ref,
-				 NTSequence6AA(c.sequence), 0);
+				 NTSequence6AA(c.sequence), seed);
 
 	if (!strictCodonBoundaries) {
 	  seq::NTSequence seq1 = circular ? linearized : ref;
@@ -623,15 +639,17 @@ int main(int argc, char **argv)
   ref.preprocess(ntWeight, aaWeight);
   GenomeScorer genomeScorer(ntScorer, aaScorer, ntWeight, aaWeight);
 
+  Cigar seed;
+
   if (local) {
     LocalAligner<GenomeScorer, Genome, NTSequence6AA, 3> aligner(genomeScorer);
-    runAga(aligner, ref, queriesFile, strictCodonBoundaries,
+    runAga(aligner, ref, queriesFile, seed, strictCodonBoundaries,
 	   proteins, args::get(ntAlignment),
 	   args::get(cdsOutput), args::get(proteinOutput),
 	   args::get(cdsNtOutput), args::get(proteinNtOutput));
   } else {
     GlobalAligner<GenomeScorer, Genome, NTSequence6AA, 3> aligner(genomeScorer);
-    runAga(aligner, ref, queriesFile, strictCodonBoundaries,
+    runAga(aligner, ref, queriesFile, seed, strictCodonBoundaries,
 	   proteins, args::get(ntAlignment),
 	   args::get(cdsOutput), args::get(proteinOutput),
 	   args::get(cdsNtOutput), args::get(proteinNtOutput));

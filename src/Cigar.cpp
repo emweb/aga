@@ -605,6 +605,18 @@ void Cigar::removeLastSkipped()
   }
 }
 
+void Cigar::unwrap()
+{
+  for (unsigned i = 0; i < size(); ++i) {
+    auto& item = (*this)[i];
+
+    if (item.op() == CigarItem::QueryWrap) {
+      erase(begin() + i);
+      return;
+    }
+  }
+}
+
 void Cigar::wrapAround(int refLength)
 {
   unsigned refI = 0;
@@ -697,6 +709,26 @@ std::vector<bool> Cigar::refCovered(int refLength) const
       break;
     case CigarItem::QueryWrap:
       refI = 0;
+    }
+  }
+
+  return result;
+}
+
+int Cigar::queryAlignedPosCount() const
+{
+  int result = 0;
+
+  for (unsigned i = 0; i < size(); ++i) {
+    auto& item = (*this)[i];
+
+    switch (item.op()) {
+    case CigarItem::RefGap:
+    case CigarItem::Match:
+      result += item.length();
+      break;
+    default:
+      break;
     }
   }
 

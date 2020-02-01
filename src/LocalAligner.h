@@ -29,7 +29,7 @@ public:
     Cigar cigar;
   };
 
-  Solution align(const Reference& seq1, const Query& seq2, int minScore = 0);
+  Solution align(const Reference& seq1, const Query& seq2, const Cigar& seed);
 
   Scorer& scorer() { return scorer_; }
 
@@ -162,7 +162,7 @@ LocalAlignment LocalAligner<Scorer, Reference, Query, SideN>
 template <class Scorer, class Reference, class Query, int SideN>
 typename LocalAligner<Scorer, Reference, Query, SideN>::Solution
 LocalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, const Query& query,
-						     int minScore)
+						     const Cigar& seed)
 {
   /*
    * Like Needlemanwunsch but keep the best solution for

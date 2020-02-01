@@ -5,6 +5,7 @@ INCLUDE_DIRECTORIES(libseq)
 SET(LIB_SOURCES
   Cigar.cpp Genbank.cpp Genome.cpp
   NTSequence6AA.cpp SimpleScorer.cpp SubstitutionMatrix.cpp
+  SearchRange.cpp
 )  
 
 ADD_LIBRARY(agalib ${LIB_SOURCES})
