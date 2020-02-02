@@ -61,7 +61,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 
   result[0].cigar.push_back(CigarItem(CigarItem::QueryGap, 0));
 
-  static const int INVALID_SCORE = -10000;
+  static const int INVALID_SCORE = std::numeric_limits<int>::min() / 2;
 
   struct ArrayItem {
     ArrayItem()
@@ -267,19 +267,21 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
     sparse_vector<Solution> new_result(query.size() + 1);
     new_result.resetRange(sr.startRow(stripeI + n), sr.endRow(stripeI + n));
 
-    for (int hj = sr.endRow(stripeI + n) - 1; hj >= sr.startRow(stripeI + n); --hj) {
-      if (hj == 0) {
+    for (int rhj = sr.endRow(stripeI + n) - 1; rhj >= sr.startRow(stripeI + n); --rhj) {
+      if (rhj == 0) {
 	new_result[0] = result[0];
-	new_result[0].cigar.back().add(n); // XXX ??
+	new_result[0].cigar.back().add(n);
 
 	continue;
       }
-      
+
       /* Trace back to start and construct cigar -- reverse in the end and append */
       Cigar rCigar;
 
+      int j = rhj - 1;
+
       int hi = i + 1;
-      int j = hj - 1;
+      int hj = j + 1;
 
       ArrayItem *ai = &work[hi][hj].D;
       int score = ai->score;
