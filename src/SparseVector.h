@@ -12,6 +12,7 @@ public:
 
   void resetRange(int start, int end) {
     first_ = start;
+    v_.clear();
     v_.resize(end - start);
   }
 

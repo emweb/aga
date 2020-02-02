@@ -268,6 +268,13 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
     new_result.resetRange(sr.startRow(stripeI + n), sr.endRow(stripeI + n));
 
     for (int hj = sr.endRow(stripeI + n) - 1; hj >= sr.startRow(stripeI + n); --hj) {
+      if (hj == 0) {
+	new_result[0] = result[0];
+	new_result[0].cigar.back().add(n); // XXX ??
+
+	continue;
+      }
+      
       /* Trace back to start and construct cigar -- reverse in the end and append */
       Cigar rCigar;
 
@@ -320,7 +327,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
       auto& nr = new_result[j + 1];
       nr = result[hj];
       nr.score = score;
-      if (rCigar.back().op() != nr.cigar.back().op()) {
+      if (nr.cigar.empty() || rCigar.back().op() != nr.cigar.back().op()) {
 	nr.cigar.insert(nr.cigar.end(), rCigar.rbegin(), rCigar.rend());
       } else {
 	nr.cigar.back().add(rCigar.back().length());
@@ -330,9 +337,6 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
       if (i == ref.size() - 1)
 	break;
     }
-
-    if (sr.startRow(stripeI + n) == 0)
-      new_result[0].cigar.back().add(n); // XXX ??
 
     std::swap(result, new_result);
   }
