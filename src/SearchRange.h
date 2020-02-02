@@ -2,6 +2,7 @@
 #define SEARCH_RANGE_H_
 
 #include <vector>
+#include <iostream>
 
 struct Cigar;
 
@@ -19,15 +20,22 @@ struct SearchRangeItem {
 };
 
 struct SearchRange {
-  SearchRange(int rows, int columns);
+  SearchRange(int aColumns, int aRows);
 
   int startRow(int column) const;
   int endRow(int column) const;
   
   std::vector<SearchRangeItem> items;
+
+  int maxRowCount() const;
+  
+  int columns, rows;
 };
 
 extern SearchRange getSearchRange(const Cigar& seed,
 				  int refSize, int querySize);
+
+extern std::ostream& operator<<(std::ostream& o, const SearchRangeItem& sri);
+extern std::ostream& operator<<(std::ostream& o, const SearchRange& sr);
 
 #endif // SEARCH_RANGE_H_

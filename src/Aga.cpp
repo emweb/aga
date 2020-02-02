@@ -507,6 +507,11 @@ int main(int argc, char **argv)
 				   "Do not optimize at codon boundaries",
 				   {"strict-codon-boundaries"});
 
+  args::ValueFlag<std::string> alignmentSeed
+    (generalGroup, "CIGAR",
+     "Seed alignment",
+     {"seed-alignment"});
+
   args::Group aaOutputGroup(parser, "Amino acid alignments output",
 			    args::Group::Validators::DontCare);
   args::ValueFlag<std::string> cdsOutput
@@ -640,6 +645,10 @@ int main(int argc, char **argv)
   GenomeScorer genomeScorer(ntScorer, aaScorer, ntWeight, aaWeight);
 
   Cigar seed;
+
+  std::string seedCigar = args::get(alignmentSeed);
+  if (!seedCigar.empty())
+    seed = Cigar::fromString(seedCigar);
 
   if (local) {
     LocalAligner<GenomeScorer, Genome, NTSequence6AA, 3> aligner(genomeScorer);

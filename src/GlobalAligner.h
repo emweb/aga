@@ -13,6 +13,7 @@
 #include "SubstitutionMatrix.h"
 #include "Cigar.h"
 #include "SearchRange.h"
+#include "SparseVector.h"
 
 template <class Scorer, class Reference, class Query, int SideN>
 class GlobalAligner
@@ -42,9 +43,11 @@ typename GlobalAligner<Scorer, Reference, Query, SideN>::Solution
 GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, const Query& query,
 						      const Cigar& seed)
 {
-  std::vector<Solution> result(query.size() + 1);
+  sparse_vector<Solution> result(query.size() + 1);
 
   const SearchRange sr = getSearchRange(seed, ref.size(), query.size());
+
+  result.resetRange(sr.startRow(0), sr.endRow(0));
 
   for (unsigned hj = std::max(1, sr.startRow(0)); hj < sr.endRow(0); ++hj) {
     unsigned j = hj - 1;
@@ -76,9 +79,9 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
     ArrayItem Q[SideN]; // ending with gaps in query
   };
 
-  const unsigned N = std::min(ref.size(), 10000*1000 / query.size());
+  const unsigned N = std::min((int)ref.size(), 10000*1000 / sr.maxRowCount());
 
-  std::vector<std::vector<ArrayItems>> work(N + 1, std::vector<ArrayItems>(query.size() + 1));
+  std::vector<sparse_vector<ArrayItems>> work(N + 1, sparse_vector<ArrayItems>(query.size() + 1));
 
 //#define TRACE
 #ifdef TRACE
@@ -89,6 +92,8 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
     unsigned n = std::min((unsigned)(ref.size() - stripeI), N);
 
     if (stripeI == 0) {
+      work[0].resetRange(sr.startRow(0), sr.endRow(0));
+
       for (unsigned hj = sr.startRow(0); hj < sr.endRow(0); ++hj) {
 	work[0][hj].D.score = result[hj].score;
 	work[0][hj].D.op = result[hj].cigar.back();
@@ -112,15 +117,19 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
     for (unsigned i = stripeI; i < stripeI + n; ++i) {
       unsigned hi = i - stripeI + 1;
 
-      work[hi][0] = work[hi - 1][0];
-      work[hi][0].D.op.add();
-      work[hi][0].D.score += scorer_.scoreExtendQueryGap(ref, query, i, -1, i);
-      work[hi][0].M = work[hi][0].D;
+      work[hi].resetRange(sr.startRow(i + 1), sr.endRow(i + 1));
 
-      for (unsigned k = 0; k < SideN; ++k)
-	work[hi][0].Q[k].op.add();
+      if (sr.startRow(i + 1) == 0) {
+	work[hi][0] = work[hi - 1][0];
+	work[hi][0].D.op.add();
+	work[hi][0].D.score += scorer_.scoreExtendQueryGap(ref, query, i, -1, i);
+	work[hi][0].M = work[hi][0].D;
 
-      for (unsigned hj = std::max(1, sr.startRow(i)); hj < sr.endRow(i); ++hj) {
+	for (unsigned k = 0; k < SideN; ++k)
+	  work[hi][0].Q[k].op.add();
+      }
+
+      for (unsigned hj = std::max(1, sr.startRow(i + 1)); hj < sr.endRow(i + 1); ++hj) {
 	unsigned j = hj - 1;
 
 #ifdef TRACE
@@ -130,20 +139,20 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 		    << scorer_.scoreExtend(ref, query, i, j) << std::endl;
 	}
 #endif
-	int sextend = work[hi - 1][hj - 1].D.score + scorer_.scoreExtend(ref, query, i, j);
+	int sextend = work[hi - 1].at(hj - 1).D.score + scorer_.scoreExtend(ref, query, i, j);
 	if (SideN > 0) {
 	  work[hi][hj].M.score = sextend;
-	  work[hi][hj].M.op = extend(work[hi - 1][hj - 1].D.op, CigarItem::Match);
+	  work[hi][hj].M.op = extend(work[hi - 1].at(hj - 1).D.op, CigarItem::Match);
 	}
 
 	int shgap = std::numeric_limits<int>::min();
 	CigarItem hgapLastOp(CigarItem::Match);
 	if (SideN == 0) {
-	  hgapLastOp = work[hi - 1][hj].D.op;
+	  hgapLastOp = work[hi - 1].at(hj).D.op;
 	  if (hgapLastOp.op() == CigarItem::Match)
-	    shgap = work[hi - 1][hj].D.score + scorer_.scoreOpenQueryGap(ref, query, i, j);
+	    shgap = work[hi - 1].at(hj).D.score + scorer_.scoreOpenQueryGap(ref, query, i, j);
 	  else if (hgapLastOp.op() == CigarItem::QueryGap)
-	    shgap = work[hi - 1][hj].D.score
+	    shgap = work[hi - 1].at(hj).D.score
 	      + scorer_.scoreExtendQueryGap(ref, query, i, j, hgapLastOp.length());
 	} else {
 #ifdef TRACE
@@ -151,12 +160,12 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 	    std::cerr << "Delta-q(1): " << work[hi - 1][hj].M.score << " + " << scorer_.scoreOpenQueryGap(ref, query, i, j)
 		      << std::endl;
 #endif
-	  int shopengap = work[hi - 1][hj].M.score + scorer_.scoreOpenQueryGap(ref, query, i, j);
+	  int shopengap = work[hi - 1].at(hj).M.score + scorer_.scoreOpenQueryGap(ref, query, i, j);
 	  shgap = shopengap;
-	  hgapLastOp = work[hi - 1][hj].M.op;
+	  hgapLastOp = work[hi - 1].at(hj).M.op;
 	  for (int k = 0; k < SideN; ++k) {
 	    int kN = (k + 1) % SideN;
-	    int sK = work[hi - 1][hj].Q[k].score + scorer_.scoreExtendQueryGap(ref, query, i, j, kN);
+	    int sK = work[hi - 1].at(hj).Q[k].score + scorer_.scoreExtendQueryGap(ref, query, i, j, kN);
 #ifdef TRACE
 	    if (i == traceI && j == traceJ)
 	      std::cerr << "Delta-q(" << k + 2 << "): " << work[hi - 1][hj].Q[k].score << " + "
@@ -164,7 +173,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 #endif
 	    if (k == SideN - 1 && shopengap > sK) {
 	      work[hi][hj].Q[0].score = shopengap;
-	      work[hi][hj].Q[0].op = extend(work[hi - 1][hj].M.op, CigarItem::QueryGap);
+	      work[hi][hj].Q[0].op = extend(work[hi - 1].at(hj).M.op, CigarItem::QueryGap);
 	    } else {
 	      work[hi][hj].Q[kN].score = sK;
 	      /*
@@ -172,11 +181,11 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 		  std::cerr << "Oops Q " << k << " " << hi - 1 << ", " << hj << std::endl;
 		}
 	      */
-	      work[hi][hj].Q[kN].op = extend(work[hi - 1][hj].Q[k].op, CigarItem::QueryGap);
+	      work[hi][hj].Q[kN].op = extend(work[hi - 1].at(hj).Q[k].op, CigarItem::QueryGap);
 
 	      if (sK > shgap) {
 		shgap = sK;
-		hgapLastOp = work[hi - 1][hj].Q[k].op;
+		hgapLastOp = work[hi - 1].at(hj).Q[k].op;
 	      }
 	    }
 	  }
@@ -185,23 +194,23 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 	int svgap = std::numeric_limits<int>::min();
 	CigarItem vgapLastOp(CigarItem::Match);
 	if (SideN == 0) {
-	  vgapLastOp = work[hi][hj - 1].D.op;
+	  vgapLastOp = work[hi].at(hj - 1).D.op;
 	  if (vgapLastOp.op() == CigarItem::Match)
-	    svgap = work[hi][hj - 1].D.score + scorer_.scoreOpenRefGap(ref, query, i, j);
+	    svgap = work[hi].at(hj - 1).D.score + scorer_.scoreOpenRefGap(ref, query, i, j);
 	  else if (vgapLastOp.op() == CigarItem::RefGap)
-	    svgap = work[hi][hj - 1].D.score
+	    svgap = work[hi].at(hj - 1).D.score
 	      + scorer_.scoreExtendRefGap(ref, query, i, j, vgapLastOp.length());
 	} else {
-	  int svopengap = work[hi][hj - 1].M.score + scorer_.scoreOpenRefGap(ref, query, i, j);
+	  int svopengap = work[hi].at(hj - 1).M.score + scorer_.scoreOpenRefGap(ref, query, i, j);
 #ifdef TRACE
 	  if (i == traceI && j == traceJ)
 	    std::cerr << "Delta-p(1): " << work[hi][hj - 1].M.score << " + " << scorer_.scoreOpenRefGap(ref, query, i, j) << std::endl;
 #endif
 	  svgap = svopengap;
-	  vgapLastOp = work[hi][hj - 1].M.op;
+	  vgapLastOp = work[hi].at(hj - 1).M.op;
 	  for (int k = 0; k < SideN; ++k) {
 	    int kN = (k + 1) % SideN;
-	    int sK = work[hi][hj - 1].P[k].score + scorer_.scoreExtendRefGap(ref, query, i, j, kN);
+	    int sK = work[hi].at(hj - 1).P[k].score + scorer_.scoreExtendRefGap(ref, query, i, j, kN);
 
 #ifdef TRACE
 	    if (i == traceI && j == traceJ)
@@ -210,7 +219,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 
 	    if (k == SideN - 1 && svopengap > sK) {
 	      work[hi][hj].P[0].score = svopengap;
-	      work[hi][hj].P[0].op = extend(work[hi][hj - 1].M.op, CigarItem::RefGap);
+	      work[hi][hj].P[0].op = extend(work[hi].at(hj - 1).M.op, CigarItem::RefGap);
 	    } else {
 	      work[hi][hj].P[kN].score = sK;
 	      /*
@@ -218,11 +227,11 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 		std::cerr << "Oops P " << k << " " << hi << ", " << hj - 1 << std::endl;
 		}
 	      */
-	      work[hi][hj].P[kN].op = extend(work[hi][hj - 1].P[k].op, CigarItem::RefGap);
+	      work[hi][hj].P[kN].op = extend(work[hi].at(hj - 1).P[k].op, CigarItem::RefGap);
 
 	      if (sK > svgap) {
 		svgap = sK;
-		vgapLastOp = work[hi][hj - 1].P[k].op;
+		vgapLastOp = work[hi].at(hj - 1).P[k].op;
 	      }
 	    }
 	  }
@@ -234,7 +243,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 	if (sextend > shgap && sextend > svgap) {
 	  work[hi][hj].D.score = sextend;
 	  op = CigarItem::Match;
-	  last = work[hi - 1][hj - 1].D.op;
+	  last = work[hi - 1].at(hj - 1).D.op;
 	  // std::cerr << "E ";
 	} else if (shgap > svgap) {	  
 	  work[hi][hj].D.score = shgap;
@@ -254,12 +263,16 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 
     // Extend solution
     const int i = n - 1;
-    for (int j = query.size() - 1; j >= 0; --j) {
+
+    sparse_vector<Solution> new_result(query.size() + 1);
+    new_result.resetRange(sr.startRow(stripeI + n), sr.endRow(stripeI + n));
+
+    for (int hj = sr.endRow(stripeI + n) - 1; hj >= sr.startRow(stripeI + n); --hj) {
       /* Trace back to start and construct cigar -- reverse in the end and append */
       Cigar rCigar;
 
       int hi = i + 1;
-      int hj = j + 1;
+      int j = hj - 1;
 
       ArrayItem *ai = &work[hi][hj].D;
       int score = ai->score;
@@ -304,21 +317,24 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
       }
 
       /* Combine with solution for hj */
-      result[j + 1] = result[hj];
-      result[j + 1].score = score;
-      if (rCigar.back().op() != result[j + 1].cigar.back().op()) {
-	result[j + 1].cigar.insert(result[j + 1].cigar.end(), rCigar.rbegin(), rCigar.rend());
+      auto& nr = new_result[j + 1];
+      nr = result[hj];
+      nr.score = score;
+      if (rCigar.back().op() != nr.cigar.back().op()) {
+	nr.cigar.insert(nr.cigar.end(), rCigar.rbegin(), rCigar.rend());
       } else {
-	result[j + 1].cigar.back().add(rCigar.back().length());
-	result[j + 1].cigar.insert(result[j + 1].cigar.end(),
-				   rCigar.rbegin() + 1, rCigar.rend());
+	nr.cigar.back().add(rCigar.back().length());
+	nr.cigar.insert(nr.cigar.end(), rCigar.rbegin() + 1, rCigar.rend());
       }
 
       if (i == ref.size() - 1)
 	break;
     }
 
-    result[0].cigar.back().add(n);
+    if (sr.startRow(stripeI + n) == 0)
+      new_result[0].cigar.back().add(n); // XXX ??
+
+    std::swap(result, new_result);
   }
 
 #ifdef TRACE
@@ -384,7 +400,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
   }
 #endif
   
-  auto& final = result.back();
+  auto& final = result[query.size()];
 
   if (!final.cigar.empty()) {
     auto& first = final.cigar[0];

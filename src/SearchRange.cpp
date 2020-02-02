@@ -10,7 +10,25 @@ SearchRangeItem::SearchRangeItem(Type aType, int aStartColumn, int anEndColumn,
     endColumn(anEndColumn)
 { }
 
-SearchRange::SearchRange(int columns, int rows)
+std::ostream& operator<<(std::ostream& o, const SearchRangeItem& sri)
+{
+  switch (sri.type) {
+  case SearchRangeItem::Rectangle:
+    o << "rect Start=(" << sri.startColumn << "," << sri.startRow << ") "
+      <<        "End=(" << sri.endColumn << "," << sri.endRow << ")";
+    break;
+  case SearchRangeItem::Parallelogram:
+    o << "para Start=(" << sri.startColumn << "," << sri.startRow << " - " << sri.endRow << ") "
+      <<        "End=(" << sri.endColumn << "," << sri.startRow + (sri.endColumn - sri.startColumn)
+      << " - " << sri.endRow + (sri.endColumn - sri.startColumn) << ")";
+  }
+
+  return o;
+}
+
+SearchRange::SearchRange(int aColumns, int aRows)
+  : columns(aColumns),
+    rows(aRows)
 {
   items.push_back(SearchRangeItem(SearchRangeItem::Rectangle,
 				  0, columns,
@@ -25,7 +43,7 @@ int SearchRange::startRow(int column) const
       case SearchRangeItem::Rectangle:
 	return i.startRow;
       case SearchRangeItem::Parallelogram:
-	return i.startRow + (column - i.startColumn);
+	return std::max(0, i.startRow + (column - i.startColumn));
       }
     }
   }
@@ -41,12 +59,26 @@ int SearchRange::endRow(int column) const
       case SearchRangeItem::Rectangle:
 	return i.endRow;
       case SearchRangeItem::Parallelogram:
-	return i.endRow + (column - i.startColumn);
+	return std::min(rows, i.endRow + (column - i.startColumn));
       }
     }
   }
 
-  throw std::runtime_error("Incomplete search range not covering " + std::to_string(column));
+  throw std::runtime_error("Incomplete search range not covering " +
+			   std::to_string(column));
+}
+
+int SearchRange::maxRowCount() const
+{
+  int result = 0;
+
+  for (const auto& i : items) {
+    int h = i.endRow - i.startRow;
+    if (h > result)
+      result = h;
+  }
+
+  return result;
 }
 
 SearchRange getSearchRange(const Cigar& seed,
@@ -55,6 +87,128 @@ SearchRange getSearchRange(const Cigar& seed,
   if (seed.empty())
     return SearchRange(refSize + 1, querySize + 1);
   else {
+    SearchRange result(refSize + 1, querySize + 1);
+    result.items.clear();
     
+    SearchRangeItem::Type currentType = SearchRangeItem::Rectangle;
+
+    int currentRefStart = 0;
+    int currentQueryStart = 0;
+
+    int refI = 1;
+    int queryI = 1;
+
+    const int MARGIN = 50; // uncertainty on aligned parts
+
+    for (const auto& i : seed) {
+      if (i.op() == CigarItem::RefSkipped ||
+	  i.op() == CigarItem::QuerySkipped) {
+	// terminate current aligned block
+	if (currentType == SearchRangeItem::Parallelogram) {
+	  if (refI > currentRefStart &&
+	      queryI > currentQueryStart) {	  
+	    int deviation = std::abs((queryI - currentQueryStart) -
+				     (refI - currentRefStart));
+
+	    deviation += MARGIN;
+
+	    result.items.push_back
+	      (SearchRangeItem(currentType,
+			       currentRefStart,
+			       refI,
+			       currentQueryStart - deviation,
+			       currentQueryStart + deviation));
+	  }
+
+	  currentType = SearchRangeItem::Rectangle;
+	  currentRefStart = refI;
+	  currentQueryStart = std::max(0, queryI - MARGIN);
+	}
+
+	if (i.op() == CigarItem::RefSkipped)
+	  refI += i.length();
+	else
+	  queryI += i.length();
+      } else {
+	// terminate current non-aligned block
+	if (currentType == SearchRangeItem::Rectangle) {
+	  result.items.push_back
+	    (SearchRangeItem(currentType,
+			     currentRefStart,
+			     refI,
+			     currentQueryStart,
+			     std::min(queryI + MARGIN, querySize + 1)));
+
+	  currentType = SearchRangeItem::Parallelogram;
+	  currentRefStart = refI;
+	  currentQueryStart = queryI;
+	}
+
+	switch (i.op()) {
+	case CigarItem::Match:
+	  refI += i.length();
+	  queryI += i.length();
+	  break;
+	case CigarItem::RefGap:
+	  queryI += i.length();
+	  break;
+	case CigarItem::QueryGap:
+	  refI += i.length();
+	  break;
+	default:
+	  break;
+	}
+      }
+    }
+
+    // Terminate last block
+    if (currentType == SearchRangeItem::Parallelogram) {
+      if (refI - MARGIN > currentRefStart &&
+	  queryI - MARGIN > currentQueryStart) {	  
+	int deviation = std::abs((queryI - currentQueryStart) -
+				 (refI - currentRefStart));
+
+	deviation += MARGIN;
+	  
+	result.items.push_back
+	  (SearchRangeItem(currentType,
+			   currentRefStart,
+			   refI - MARGIN,
+			   std::max(currentQueryStart - deviation, 0),
+			   std::min(currentQueryStart + deviation, querySize + 1)));
+      }
+
+      currentType = SearchRangeItem::Rectangle;
+      currentRefStart = refI - MARGIN;
+      currentQueryStart = queryI - MARGIN;
+    }
+
+    if (currentRefStart < refSize + 1) {
+      result.items.push_back
+	(SearchRangeItem(currentType,
+			 currentRefStart, refSize + 1,
+			 currentQueryStart, querySize + 1));
+    }
+
+    std::cerr << result;
+    
+    return result;
   }
+}
+
+std::ostream& operator<<(std::ostream& o, const SearchRange& sr)
+{
+  std::cerr << "SearchRange [";
+
+  bool first = true;
+  for (const auto& i : sr.items) {
+    if (!first)
+      std::cerr << ",";
+    std::cerr << std::endl << "  " << i;
+    first = false;
+  }
+  
+  std::cerr << std::endl << "]" << std::endl;
+
+  return o;
 }
