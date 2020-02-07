@@ -30,7 +30,8 @@ public:
     Cigar cigar;
   };
 
-  Solution align(const Reference& seq1, const Query& seq2, const Cigar& seed);
+  Solution align(const Reference& seq1, const Query& seq2,
+		 SearchRange sr = SearchRange());
 
   Scorer& scorer() { return scorer_; }
   
@@ -41,11 +42,12 @@ private:
 template <class Scorer, class Reference, class Query, int SideN>
 typename GlobalAligner<Scorer, Reference, Query, SideN>::Solution
 GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, const Query& query,
-						      const Cigar& seed)
+						      SearchRange sr)
 {
   sparse_vector<Solution> result(query.size() + 1);
 
-  const SearchRange sr = getSearchRange(seed, ref.size(), query.size());
+  if (sr.items.empty())
+    sr = SearchRange(ref.size() + 1, query.size() + 1);
 
   result.resetRange(sr.startRow(0), sr.endRow(0));
 

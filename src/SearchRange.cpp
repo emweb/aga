@@ -26,6 +26,11 @@ std::ostream& operator<<(std::ostream& o, const SearchRangeItem& sri)
   return o;
 }
 
+SearchRange::SearchRange()
+  : columns(0),
+    rows(0)
+{ }
+
 SearchRange::SearchRange(int aColumns, int aRows)
   : columns(aColumns),
     rows(aRows)
@@ -41,7 +46,7 @@ int SearchRange::startRow(int column) const
     if (column < i.endColumn) {
       switch (i.type) {
       case SearchRangeItem::Rectangle:
-	return i.startRow;
+	return std::max(0, i.startRow);
       case SearchRangeItem::Parallelogram:
 	return std::max(0, i.startRow + (column - i.startColumn));
       }
@@ -57,7 +62,7 @@ int SearchRange::endRow(int column) const
     if (column < i.endColumn) {
       switch (i.type) {
       case SearchRangeItem::Rectangle:
-	return i.endRow;
+	return std::min(rows, i.endRow);
       case SearchRangeItem::Parallelogram:
 	return std::min(rows, i.endRow + (column - i.startColumn));
       }
@@ -76,6 +81,19 @@ int SearchRange::maxRowCount() const
     int h = i.endRow - i.startRow;
     if (h > result)
       result = h;
+  }
+
+  return result;
+}
+
+long SearchRange::size() const
+{
+  long result = 0;
+
+  for (const auto& i : items) {
+    long h = i.endRow - i.startRow;
+    long w = i.endColumn - i.startColumn;
+    result += h * w;
   }
 
   return result;
@@ -105,8 +123,7 @@ SearchRange getSearchRange(const Cigar& seed,
 	  i.op() == CigarItem::QuerySkipped) {
 	// terminate current aligned block
 	if (currentType == SearchRangeItem::Parallelogram) {
-	  if (refI > currentRefStart &&
-	      queryI > currentQueryStart) {	  
+	  if (refI > currentRefStart && queryI > currentQueryStart) {	  
 	    int deviation = std::abs((queryI - currentQueryStart) -
 				     (refI - currentRefStart));
 
@@ -122,7 +139,7 @@ SearchRange getSearchRange(const Cigar& seed,
 
 	  currentType = SearchRangeItem::Rectangle;
 	  currentRefStart = refI;
-	  currentQueryStart = std::max(0, queryI - MARGIN);
+	  currentQueryStart = queryI - MARGIN;
 	}
 
 	if (i.op() == CigarItem::RefSkipped)
@@ -137,7 +154,7 @@ SearchRange getSearchRange(const Cigar& seed,
 			     currentRefStart,
 			     refI,
 			     currentQueryStart,
-			     std::min(queryI + MARGIN, querySize + 1)));
+			     queryI + MARGIN));
 
 	  currentType = SearchRangeItem::Parallelogram;
 	  currentRefStart = refI;
@@ -159,33 +176,34 @@ SearchRange getSearchRange(const Cigar& seed,
 	  break;
 	}
       }
+
+      refI = std::min(refI, refSize);
+      queryI = std::min(queryI, querySize);
     }
 
     // Terminate last block
     if (currentType == SearchRangeItem::Parallelogram) {
-      if (refI - MARGIN > currentRefStart &&
-	  queryI - MARGIN > currentQueryStart) {	  
+      if (refI > currentRefStart && queryI > currentQueryStart) {	  
 	int deviation = std::abs((queryI - currentQueryStart) -
 				 (refI - currentRefStart));
 
 	deviation += MARGIN;
-	  
+
 	result.items.push_back
 	  (SearchRangeItem(currentType,
 			   currentRefStart,
-			   refI - MARGIN,
-			   std::max(currentQueryStart - deviation, 0),
-			   std::min(currentQueryStart + deviation, querySize + 1)));
-      }
+			   refI,
+			   currentQueryStart - deviation,
+			   currentQueryStart + deviation));
 
-      currentType = SearchRangeItem::Rectangle;
-      currentRefStart = refI - MARGIN;
-      currentQueryStart = queryI - MARGIN;
+	currentRefStart = refI;
+	currentQueryStart = queryI - MARGIN;
+      }
     }
 
     if (currentRefStart < refSize + 1) {
       result.items.push_back
-	(SearchRangeItem(currentType,
+	(SearchRangeItem(SearchRangeItem::Rectangle,
 			 currentRefStart, refSize + 1,
 			 currentQueryStart, querySize + 1));
     }

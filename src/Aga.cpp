@@ -12,6 +12,7 @@
 #include "../args/args.hxx"
 
 #include <fstream>
+#include <cmath>
 #include <ctime>
 
 struct Contig {
@@ -178,7 +179,7 @@ void realignGaps(const SimpleScorer<seq::NTSequence>& nucleotideScorer,
 
 template<typename Aligner>
 void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
-	    Cigar seed,
+	    Cigar seed, int maxLength,
 	    bool strictCodonBoundaries,
 	    const std::vector<CdsFeature>& proteins,
 	    const std::string& ntAlignmentFile,
@@ -200,7 +201,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
     if (!seed.empty())
       seed.unwrap();
   }
-  
+
   for (;;) {
     seq::NTSequence query;
     q >> query;
@@ -210,6 +211,18 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 
     removeGaps(query);
 
+    const SearchRange sr = getSearchRange(seed,
+					  circular ? linearized.size() : ref.size(),
+					  query.size());
+
+    if (maxLength > 0) {
+      if (sr.size() > maxLength * maxLength) {
+	std::cerr << "Not aligning since sqrt(matrix size) = " << std::sqrt(sr.size())
+		  << " > " << maxLength << std::endl;
+	exit(0);
+      }
+    }
+    
     std::vector<Contig> contigs;
 
     if (seed.empty())
@@ -241,7 +254,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
       if (c.sequence.size() > 0) {
 	c.sequence.sampleAmbiguities();
 	solution = aligner.align(circular ? linearized : ref,
-				 NTSequence6AA(c.sequence), seed);
+				 NTSequence6AA(c.sequence), sr);
 
 	if (!strictCodonBoundaries) {
 	  seq::NTSequence seq1 = circular ? linearized : ref;
@@ -509,8 +522,13 @@ int main(int argc, char **argv)
 
   args::ValueFlag<std::string> alignmentSeed
     (generalGroup, "CIGAR",
-     "Seed alignment",
+     "File containing seed alignment CIGAR",
      {"seed-alignment"});
+
+  args::ValueFlag<int> maxLength
+    (generalGroup, "LENGTH",
+     "Max length to align, ~ sqrt(ref len * query len), or 0 for unlimited (default=0)",
+     {"max-length"}, 0);
 
   args::Group aaOutputGroup(parser, "Amino acid alignments output",
 			    args::Group::Validators::DontCare);
@@ -646,19 +664,29 @@ int main(int argc, char **argv)
 
   Cigar seed;
 
-  std::string seedCigar = args::get(alignmentSeed);
-  if (!seedCigar.empty())
-    seed = Cigar::fromString(seedCigar);
+  std::string seedCigarFile = args::get(alignmentSeed);
+  if (!seedCigarFile.empty()) {
+    std::ifstream f(seedCigarFile);
+    if (!f) {
+      std::cerr << "Error: --seed-alignment: could not read file" << std::endl;
+      return 1;
+    }
+    std::string s;
+    f >> s;
+    seed = Cigar::fromString(s);
+  }
+
+  int maxL = args::get(maxLength);
 
   if (local) {
     LocalAligner<GenomeScorer, Genome, NTSequence6AA, 3> aligner(genomeScorer);
-    runAga(aligner, ref, queriesFile, seed, strictCodonBoundaries,
+    runAga(aligner, ref, queriesFile, seed, maxL, strictCodonBoundaries,
 	   proteins, args::get(ntAlignment),
 	   args::get(cdsOutput), args::get(proteinOutput),
 	   args::get(cdsNtOutput), args::get(proteinNtOutput));
   } else {
     GlobalAligner<GenomeScorer, Genome, NTSequence6AA, 3> aligner(genomeScorer);
-    runAga(aligner, ref, queriesFile, seed, strictCodonBoundaries,
+    runAga(aligner, ref, queriesFile, seed, maxL, strictCodonBoundaries,
 	   proteins, args::get(ntAlignment),
 	   args::get(cdsOutput), args::get(proteinOutput),
 	   args::get(cdsNtOutput), args::get(proteinNtOutput));

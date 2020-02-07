@@ -13,6 +13,7 @@
 #include "LocalAlignments.h"
 #include "SubstitutionMatrix.h"
 #include "Cigar.h"
+#include "SearchRange.h"
 
 template <class Scorer, class Reference, class Query, int SideN>
 class LocalAligner
@@ -29,7 +30,8 @@ public:
     Cigar cigar;
   };
 
-  Solution align(const Reference& seq1, const Query& seq2, const Cigar& seed);
+  Solution align(const Reference& seq1, const Query& seq2,
+		 const SearchRange& sr = SearchRange());
 
   Scorer& scorer() { return scorer_; }
 
@@ -162,7 +164,7 @@ LocalAlignment LocalAligner<Scorer, Reference, Query, SideN>
 template <class Scorer, class Reference, class Query, int SideN>
 typename LocalAligner<Scorer, Reference, Query, SideN>::Solution
 LocalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, const Query& query,
-						     const Cigar& seed)
+						     const SearchRange&)
 {
   /*
    * Like Needlemanwunsch but keep the best solution for

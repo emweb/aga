@@ -20,6 +20,7 @@ struct SearchRangeItem {
 };
 
 struct SearchRange {
+  SearchRange();
   SearchRange(int aColumns, int aRows);
 
   int startRow(int column) const;
@@ -28,6 +29,8 @@ struct SearchRange {
   std::vector<SearchRangeItem> items;
 
   int maxRowCount() const;
+
+  long size() const;
   
   int columns, rows;
 };
