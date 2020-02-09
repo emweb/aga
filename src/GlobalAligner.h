@@ -47,6 +47,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
     unsigned hj = j + 1;
     result[hj].cigar = result[hj - 1].cigar;
     result[hj].cigar.addRefGap();
+    result[hj].score = result[hj - 1].score;
     if (j == 0)
       result[hj].score += scorer_.scoreOpenRefGap(ref, query, -1, 0);
     else
