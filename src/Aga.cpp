@@ -213,7 +213,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 
     const SearchRange sr = getSearchRange(seed,
 					  circular ? linearized.size() : ref.size(),
-					  query.size());
+					  query.size(), 30);
 
     if (maxLength > 0) {
       if (sr.size() > maxLength * maxLength) {

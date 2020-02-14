@@ -120,6 +120,8 @@ struct Cigar : public std::vector<CigarItem>
 
   int findAlignedPos(int refPos) const;
 
+  bool empty() const;
+  
   void removeUnalignedQuery(seq::NTSequence& query);
   void align(seq::NTSequence& ref, seq::NTSequence& query) const;
   static Cigar createFromAlignment(const seq::NTSequence& ref,

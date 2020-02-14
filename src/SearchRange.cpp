@@ -100,7 +100,7 @@ long SearchRange::size() const
 }
 
 SearchRange getSearchRange(const Cigar& seed,
-			   int refSize, int querySize)
+			   int refSize, int querySize, int margin)
 {
   if (seed.empty())
     return SearchRange(refSize + 1, querySize + 1);
@@ -116,7 +116,7 @@ SearchRange getSearchRange(const Cigar& seed,
     int refI = 1;
     int queryI = 1;
 
-    const int MARGIN = 50; // uncertainty on aligned parts
+    const int MARGIN = margin;
 
     for (const auto& i : seed) {
       if (i.op() == CigarItem::RefSkipped ||
@@ -149,6 +149,19 @@ SearchRange getSearchRange(const Cigar& seed,
       } else {
 	// terminate current non-aligned block
 	if (currentType == SearchRangeItem::Rectangle) {
+	  if (result.items.empty()) {
+	    int s = refI - queryI - 10 * MARGIN;
+	    if (s > MARGIN) {
+	      result.items.push_back
+		(SearchRangeItem(currentType,
+				 currentRefStart,
+				 s,
+				 currentQueryStart,
+				 1));
+	      currentRefStart = s;
+	    }
+	  }
+
 	  result.items.push_back
 	    (SearchRangeItem(currentType,
 			     currentRefStart,
@@ -202,6 +215,16 @@ SearchRange getSearchRange(const Cigar& seed,
     }
 
     if (currentRefStart < refSize + 1) {
+      int s = currentRefStart + (querySize - queryI + 10 * MARGIN);
+      if (s < refSize + 1 - MARGIN) {
+	result.items.push_back
+	  (SearchRangeItem(SearchRangeItem::Rectangle,
+			   currentRefStart, s,
+			   currentQueryStart, querySize + 1));
+	currentRefStart = s;
+	currentQueryStart = querySize;
+      }
+            
       result.items.push_back
 	(SearchRangeItem(SearchRangeItem::Rectangle,
 			 currentRefStart, refSize + 1,

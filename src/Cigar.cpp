@@ -7,6 +7,16 @@
 #include <sstream>
 #include "Cigar.h"
 
+bool Cigar::empty() const
+{
+  return size() == 0 ||
+    size() == 2 &&
+    ((*this)[0].op() == CigarItem::RefSkipped ||
+     (*this)[0].op() == CigarItem::QuerySkipped) &&
+    ((*this)[1].op() == CigarItem::RefSkipped ||
+     (*this)[1].op() == CigarItem::QuerySkipped);
+}
+
 int Cigar::findAlignedPos(int refPos) const
 {
   /*
