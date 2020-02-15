@@ -550,6 +550,147 @@ void Cigar::trimQueryEnd(int alignmentLength)
     push_back(CigarItem(CigarItem::QuerySkipped, querySkipped));
 }
 
+void Cigar::eraseQueryPos(int queryPos)
+{
+  unsigned queryI = 0;
+
+  for (unsigned i = 0; i < size(); ++i) {
+    auto& item = (*this)[i];
+
+    switch (item.op()) {
+    case CigarItem::QuerySkipped:
+    case CigarItem::RefGap:
+    case CigarItem::Match:
+      if (queryPos < queryI + item.length()) {
+	item.add(-1);
+	return;
+      }
+
+      queryI += item.length();
+      break;
+    case CigarItem::BothGap:
+    case CigarItem::QueryGap:
+    case CigarItem::RefSkipped:
+    case CigarItem::QueryWrap:
+      break;
+    }
+  }
+
+  assert(false);
+}
+
+void Cigar::makeCanonical()
+{
+  // Join consecutive operations that are the same or have a length of zero.
+  for (unsigned i = 0; i < size(); ++i) {
+    auto& item = (*this)[i];
+    if (item.op() != CigarItem::QueryWrap &&
+	item.length() == 0) {
+      erase(begin() + i);
+      --i;
+    } else if (i < size() - 1) {
+      auto& next = (*this)[i + 1];
+      if (item.op() == next.op()) {
+	next.add(item.length());
+	erase(begin() + i);
+	--i;
+      }
+    }
+  }
+}
+
+int Cigar::refLength() const
+{
+  unsigned result = 0;
+
+  for (unsigned i = 0; i < size(); ++i) {
+    auto& item = (*this)[i];
+
+    switch (item.op()) {
+    case CigarItem::Match:
+    case CigarItem::QueryGap:
+    case CigarItem::RefSkipped:
+      result += item.length();
+      break;
+    case CigarItem::BothGap:
+    case CigarItem::RefGap:
+    case CigarItem::QuerySkipped:
+      break;
+    case CigarItem::QueryWrap:
+      return result; // or x 2?
+    }
+  }
+
+  return result;
+}
+
+std::pair<Cigar, Cigar> Cigar::splitQuery(int queryPos) const
+{
+  unsigned queryI = 0;
+  unsigned refI = 0;
+
+  for (unsigned i = 0; i < size(); ++i) {
+    const auto& item = (*this)[i];
+
+    switch (item.op()) {
+    case CigarItem::QuerySkipped:
+    case CigarItem::RefGap:
+    case CigarItem::Match:
+      if (queryPos <= queryI + item.length()) {
+	Cigar p1, p2;	
+
+	p1.insert(p1.end(), begin(), begin() + i);
+	int itemPos = queryPos - queryI;
+	CigarItem itemP1 = CigarItem(item.op(), itemPos);
+	CigarItem itemP2 = CigarItem(item.op(), item.length() - itemPos);
+
+	if (itemP1.length() > 0)
+	  p1.push_back(itemP1);
+	if (itemP2.length() > 0)
+	  p2.push_back(itemP2);
+	if (i + 1 < size())
+	  p2.insert(p2.end(), begin() + i + 1, begin() + size());
+
+	int rl = refLength();
+	int p1rl = p1.refLength();
+
+	if (p1rl < rl)
+	  p1.push_back(CigarItem(CigarItem::RefSkipped, rl - p1rl));
+
+	int p2rl = p2.refLength();
+	if (p2rl < rl)
+	  p2.insert(p2.begin(), CigarItem(CigarItem::RefSkipped, rl - p2rl));
+
+	p1.makeCanonical();
+	p2.makeCanonical();
+
+	return std::make_pair(p1, p2);
+      }
+
+      queryI += item.length();
+      break;
+    case CigarItem::BothGap:
+    case CigarItem::QueryGap:
+    case CigarItem::RefSkipped:
+    case CigarItem::QueryWrap:
+      break;
+    }
+  }
+
+  if (queryI == queryPos) {
+    // Nothing remains.
+    Cigar p1 = *this;
+    Cigar p2;
+    int rl = refLength();
+    if (rl > 0)
+      p2.push_back(CigarItem(CigarItem::RefSkipped, rl));
+    return std::make_pair(p1, p2);
+  }
+  
+  assert(false);
+
+}
+
 std::string Cigar::str() const
 {
   std::stringstream ss;

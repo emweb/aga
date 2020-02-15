@@ -18,57 +18,77 @@
 struct Contig {
   int queryOffset;
   seq::NTSequence sequence;
+  Cigar seed;
 };
 
-std::vector<Contig> splitContigs(const seq::NTSequence& s)
+std::vector<Contig> splitContigs(seq::NTSequence& s, const Cigar& seed)
 {
   // if there are long stretches of Ns : then we break the sequence and treat contigs
   // individually
   const int STRETCH_CUTOFF = 10;
 
-  std::vector<Contig> result;
+  seq::NTSequence editedSequence = s;
+  Cigar editedSeed = seed;
+  std::vector<int> contigStartPos; // includes end
 
   int stretchN = 0;
-  int startI = -1;
-  for (int i = 0; i < s.size(); ++i) {
-    if (s[i] == seq::Nucleotide::N) {
-      if (startI >= 0) {
-	++stretchN;
 
-	if (stretchN == STRETCH_CUTOFF) {
-	  int endI = i + 1 - STRETCH_CUTOFF;
-	  if (endI - startI > 20) {
-	    Contig c;
-	    c.sequence = seq::NTSequence(s.begin() + startI,
-					 s.begin() + i + 1 - STRETCH_CUTOFF);
-	    c.sequence.setName(s.name());
-	    c.sequence.setDescription(s.description());
-	    c.queryOffset = startI;
-	    result.push_back(c);
-	  }
-	  startI = -1;
+  for (int i = 0; i < editedSequence.size() + 1; ++i) {
+    if (i != editedSequence.size() && editedSequence[i] == seq::Nucleotide::N)
+      ++stretchN;
+    else {
+      if (i == 0 || stretchN > 0) {
+	if (i == 0 || stretchN >= STRETCH_CUTOFF) {
+	  // edit away N's
+	  editedSequence.erase(editedSequence.begin() + i - stretchN,
+			       editedSequence.begin() + i);
+	  for (int j = 0; j < stretchN; ++j)
+	    editedSeed.eraseQueryPos(i - stretchN);
+
+	  i -= stretchN;
+
+	  contigStartPos.push_back(i);
 	}
+
+	stretchN = 0;
       }
-    } else {
-      if (startI < 0)
-	startI = i;
-      stretchN = 0;
     }
   }
 
-  if (startI >= 0 && startI < s.size()) {
-    Contig c;
-    c.sequence = seq::NTSequence(s.begin() + startI, s.end());
-    c.sequence.setName(s.name());
-    c.sequence.setDescription(s.description());
-    c.queryOffset = startI;
-    result.push_back(c);
+  std::vector<Contig> result;
+
+  editedSeed.makeCanonical();
+  
+  for (int i = 0; i < contigStartPos.size() - 1; ++i) {
+    int si = contigStartPos[i];
+    int ei = contigStartPos[i + 1];
+
+    std::pair<Cigar, Cigar> seeds = editedSeed.splitQuery(ei - si);
+
+    if (ei - si > 2 * STRETCH_CUTOFF) {
+      Contig c;
+      c.sequence = seq::NTSequence(editedSequence.begin() + si,
+				   editedSequence.begin() + ei);
+      c.sequence.setName(s.name());
+      c.sequence.setDescription(s.description());
+      c.queryOffset = si; // correct ?
+      c.seed = seeds.first;
+
+      std::cerr << c.sequence
+		<< c.seed << std::endl;
+
+      result.push_back(c);
+    }
+    
+    editedSeed = seeds.second;
   }
 
   std::sort(result.begin(), result.end(), [](const Contig& a, const Contig& b) {
       return a.sequence.size() > b.sequence.size();   
     });
 
+  s = editedSequence;
+  
   return result;
 }
 
@@ -211,28 +231,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 
     removeGaps(query);
 
-    const SearchRange sr = getSearchRange(seed,
-					  circular ? linearized.size() : ref.size(),
-					  query.size(), 30);
-
-    if (maxLength > 0) {
-      if (sr.size() > maxLength * maxLength) {
-	std::cerr << "Not aligning since sqrt(matrix size) = " << std::sqrt(sr.size())
-		  << " > " << maxLength << std::endl;
-	exit(0);
-      }
-    }
-    
-    std::vector<Contig> contigs;
-
-    if (seed.empty())
-      contigs = splitContigs(query);
-    else {
-      Contig c;
-      c.queryOffset = 0;
-      c.sequence = query;
-      contigs.push_back(c);
-    }
+    std::vector<Contig> contigs = splitContigs(query, seed);
 
     LocalAlignments contigAlignments;
 
@@ -244,15 +243,20 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 		<< " (len="
 		<< c.sequence.size() << ") against "
 		<< ref.name() << " (len=" << ref.size() << ")";
+      
+      const SearchRange sr = getSearchRange(c.seed,
+					    circular ? linearized.size() : ref.size(),
+					    c.sequence.size(), 30);
 
-      if (!seed.empty())
-	std::cerr << " using seed of length " << seed.queryAlignedPosCount();
+      if (!c.seed.empty())
+	std::cerr << " using seed of length " << c.seed.queryAlignedPosCount();
       std::cerr << std::endl;
 
       typename Aligner::Solution solution;
 
-      if (c.sequence.size() > 0) {
+      if (c.sequence.size() > 0) {	
 	c.sequence.sampleAmbiguities();
+
 	solution = aligner.align(circular ? linearized : ref,
 				 NTSequence6AA(c.sequence), sr);
 
