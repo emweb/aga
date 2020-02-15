@@ -118,6 +118,30 @@ struct Cigar : public std::vector<CigarItem>
     push_back(CigarItem(CigarItem::QueryGap));
   }
 
+  void addRefSkip() {
+    if (!empty()) {
+      CigarItem& b = back();
+      if (b.op() == CigarItem::RefSkipped) {
+	b.add();
+	return;
+      }
+    }
+
+    push_back(CigarItem(CigarItem::RefSkipped));
+  }
+
+  void addQuerySkip() {
+    if (!empty()) {
+      CigarItem& b = back();
+      if (b.op() == CigarItem::QuerySkipped) {
+	b.add();
+	return;
+      }
+    }
+
+    push_back(CigarItem(CigarItem::QuerySkipped));
+  }
+
   int findAlignedPos(int refPos) const;
 
   bool empty() const;

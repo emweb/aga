@@ -36,7 +36,7 @@ struct SearchRange {
 };
 
 extern SearchRange getSearchRange(const Cigar& seed,
-				  int refSize, int querySize, int margin = 50);
+				  int refSize, int querySize, int margin = 150);
 
 extern std::ostream& operator<<(std::ostream& o, const SearchRangeItem& sri);
 extern std::ostream& operator<<(std::ostream& o, const SearchRange& sr);

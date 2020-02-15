@@ -231,8 +231,6 @@ SearchRange getSearchRange(const Cigar& seed,
 			 currentQueryStart, querySize + 1));
     }
 
-    std::cerr << result;
-    
     return result;
   }
 }

@@ -37,8 +37,8 @@ std::vector<Contig> splitContigs(seq::NTSequence& s, const Cigar& seed)
     if (i != editedSequence.size() && editedSequence[i] == seq::Nucleotide::N)
       ++stretchN;
     else {
-      if (i == 0 || stretchN > 0) {
-	if (i == 0 || stretchN >= STRETCH_CUTOFF) {
+      if (i == editedSequence.size() || i == 0 || stretchN > 0) {
+	if (i == editedSequence.size() || i == 0 || stretchN >= STRETCH_CUTOFF) {
 	  // edit away N's
 	  editedSequence.erase(editedSequence.begin() + i - stretchN,
 			       editedSequence.begin() + i);
@@ -63,7 +63,9 @@ std::vector<Contig> splitContigs(seq::NTSequence& s, const Cigar& seed)
     int si = contigStartPos[i];
     int ei = contigStartPos[i + 1];
 
-    std::pair<Cigar, Cigar> seeds = editedSeed.splitQuery(ei - si);
+    std::pair<Cigar, Cigar> seeds;
+    if (!editedSeed.empty())
+      seeds = editedSeed.splitQuery(ei - si);
 
     if (ei - si > 2 * STRETCH_CUTOFF) {
       Contig c;
@@ -246,7 +248,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
       
       const SearchRange sr = getSearchRange(c.seed,
 					    circular ? linearized.size() : ref.size(),
-					    c.sequence.size(), 30);
+					    c.sequence.size());
 
       if (!c.seed.empty())
 	std::cerr << " using seed of length " << c.seed.queryAlignedPosCount();
