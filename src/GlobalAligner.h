@@ -90,14 +90,17 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 #ifdef TRACE
   static const int traceI = 6, traceJ = 5;
 #endif
+
+  int startRow = 0;
   
   for (unsigned stripeI = 0; stripeI < ref.size(); stripeI += N) {
     unsigned n = std::min((unsigned)(ref.size() - stripeI), N);
 
     if (stripeI == 0) {
-      work[0].resetRange(sr.startRow(0), sr.endRow(0));
+      startRow = sr.startRow(0);
+      work[0].resetRange(startRow, sr.endRow(0));
 
-      for (unsigned hj = sr.startRow(0); hj < sr.endRow(0); ++hj) {
+      for (unsigned hj = startRow; hj < sr.endRow(0); ++hj) {
 	work[0][hj].D.score = result[hj].score;
 	work[0][hj].D.op = result[hj].cigar.back();
 	work[0][hj].M = work[0][hj].D;
@@ -120,9 +123,11 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
     for (unsigned i = stripeI; i < stripeI + n; ++i) {
       unsigned hi = i - stripeI + 1;
 
-      work[hi].resetRange(sr.startRow(i + 1), sr.endRow(i + 1));
+      startRow = std::max(startRow, sr.startRow(i + 1));
+      
+      work[hi].resetRange(startRow, sr.endRow(i + 1));
 
-      if (sr.startRow(i + 1) == 0) {
+      if (startRow == 0) {
 	work[hi][0] = work[hi - 1][0];
 	work[hi][0].D.op.add();
 	work[hi][0].D.score += scorer_.scoreExtendQueryGap(ref, query, i, -1, i);
@@ -132,7 +137,7 @@ GlobalAligner<Scorer, Reference, Query, SideN>::align(const Reference& ref, cons
 	  work[hi][0].Q[k].op.add();
       }
 
-      for (unsigned hj = std::max(1, sr.startRow(i + 1)); hj < sr.endRow(i + 1); ++hj) {
+      for (unsigned hj = std::max(1, startRow); hj < sr.endRow(i + 1); ++hj) {
 	unsigned j = hj - 1;
 
 #ifdef TRACE
