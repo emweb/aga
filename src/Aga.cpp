@@ -256,7 +256,16 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 
       typename Aligner::Solution solution;
 
-      if (c.sequence.size() > 0) {	
+      if (sr.size() > maxLength * maxLength) {
+	std::cerr << "Not aligning because search range too large "
+		  << sqrt(sr.size()) << " > " << maxLength << std::endl;
+	solution.score = 0;
+	solution.cigar = c.seed;
+	if (solution.cigar.empty()) {
+	  solution.cigar.push_back(CigarItem(CigarItem::RefSkipped, ref.size()));
+	  solution.cigar.push_back(CigarItem(CigarItem::QuerySkipped, query.size()));
+	}
+      } else if (c.sequence.size() > 0) {	
 	c.sequence.sampleAmbiguities();
 
 	solution = aligner.align(circular ? linearized : ref,
