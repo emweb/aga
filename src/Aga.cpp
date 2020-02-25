@@ -256,7 +256,7 @@ void runAga(Aligner& aligner, const Genome& ref, const std::string& queriesFile,
 
       typename Aligner::Solution solution;
 
-      if (sr.size() > maxLength * maxLength) {
+      if (maxLength > 0 && sr.size() > maxLength * maxLength) {
 	std::cerr << "Not aligning because search range too large "
 		  << sqrt(sr.size()) << " > " << maxLength << std::endl;
 	solution.score = 0;
