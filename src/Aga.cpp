@@ -37,8 +37,8 @@ std::vector<Contig> splitContigs(seq::NTSequence& s, const Cigar& seed)
     if (i != editedSequence.size() && editedSequence[i] == seq::Nucleotide::N)
       ++stretchN;
     else {
-      if (i == editedSequence.size() || i == 0 || stretchN > 0) {
-	if (i == editedSequence.size() || i == 0 || stretchN >= STRETCH_CUTOFF) {
+      if (i == editedSequence.size() || i - stretchN == 0 || stretchN > 0) {
+	if (i == editedSequence.size() || i - stretchN == 0 || stretchN >= STRETCH_CUTOFF) {
 	  // edit away N's
 	  editedSequence.erase(editedSequence.begin() + i - stretchN,
 			       editedSequence.begin() + i);
